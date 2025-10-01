@@ -96,9 +96,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             word_id = cur.fetchone()[0]
         
         cur.execute(
-            """INSERT INTO cards (user_id, category_id, word_id, learned) 
-               VALUES (%s, %s, %s, %s) RETURNING id""",
-            (user_id, body_data['categoryId'], word_id, False)
+            """INSERT INTO cards (user_id, category_id, word_id, russian, english, russian_example, english_example, learned) 
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+            (user_id, body_data['categoryId'], word_id, russian, english, russian_example, english_example, False)
         )
         
         card_id = cur.fetchone()[0]
