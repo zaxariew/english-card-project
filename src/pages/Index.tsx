@@ -57,6 +57,8 @@ export default function Index() {
   });
   
   const [isTranslating, setIsTranslating] = useState(false);
+  const [editingCard, setEditingCard] = useState<WordCard | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const [newCategory, setNewCategory] = useState({
     name: '',
@@ -279,6 +281,62 @@ export default function Index() {
   const handlePrevious = () => {
     setIsFlipped(false);
     setCurrentCardIndex((prev) => (prev - 1 + cards.length) % cards.length);
+  };
+
+  const handleEditCard = async () => {
+    if (!user || !editingCard) return;
+
+    try {
+      const response = await fetch(API_URLS.cards, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          cardId: editingCard.id,
+          ...editingCard,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Карточка обновлена!');
+        setEditDialogOpen(false);
+        setEditingCard(null);
+        loadCards(user.id);
+      } else {
+        toast.error('Ошибка при обновлении');
+      }
+    } catch (error) {
+      toast.error('Не удалось обновить карточку');
+    }
+  };
+
+  const handleDeleteCard = async (cardId: number) => {
+    if (!user || !confirm('Удалить эту карточку?')) return;
+
+    try {
+      const response = await fetch(API_URLS.cards, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id.toString(),
+        },
+        body: JSON.stringify({ cardId }),
+      });
+
+      if (response.ok) {
+        toast.success('Карточка удалена');
+        loadCards(user.id);
+        if (currentCardIndex >= cards.length - 1) {
+          setCurrentCardIndex(Math.max(0, cards.length - 2));
+        }
+      } else {
+        toast.error('Ошибка при удалении');
+      }
+    } catch (error) {
+      toast.error('Не удалось удалить карточку');
+    }
   };
 
   const handleMarkLearned = async () => {
@@ -751,9 +809,34 @@ export default function Index() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <Badge className={card.categoryColor}>{card.categoryName}</Badge>
-                      {card.learned && (
-                        <Icon name="CheckCircle2" size={18} className="text-green-500" />
-                      )}
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCard(card);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Icon name="Pencil" size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-red-500 hover:text-red-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCard(card.id);
+                          }}
+                        >
+                          <Icon name="Trash2" size={14} />
+                        </Button>
+                        {card.learned && (
+                          <Icon name="CheckCircle2" size={18} className="text-green-500" />
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div>
@@ -937,6 +1020,65 @@ export default function Index() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать карточку</DialogTitle>
+          </DialogHeader>
+          {editingCard && (
+            <div className="space-y-4 pt-4">
+              <div>
+                <Label>Русское слово</Label>
+                <Input
+                  value={editingCard.russian}
+                  onChange={(e) => setEditingCard({ ...editingCard, russian: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Пример (рус)</Label>
+                <Input
+                  value={editingCard.russianExample}
+                  onChange={(e) => setEditingCard({ ...editingCard, russianExample: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Английское слово</Label>
+                <Input
+                  value={editingCard.english}
+                  onChange={(e) => setEditingCard({ ...editingCard, english: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Пример (англ)</Label>
+                <Input
+                  value={editingCard.englishExample}
+                  onChange={(e) => setEditingCard({ ...editingCard, englishExample: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Категория</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {categories.map((cat) => (
+                    <Button
+                      key={cat.id}
+                      variant={editingCard.categoryId === cat.id ? 'default' : 'outline'}
+                      onClick={() => setEditingCard({ ...editingCard, categoryId: cat.id })}
+                      className="w-full"
+                    >
+                      {cat.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleEditCard} className="flex-1">Сохранить</Button>
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="flex-1">Отмена</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

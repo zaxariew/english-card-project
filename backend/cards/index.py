@@ -115,12 +115,42 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     elif method == 'PUT':
         body_data = json.loads(event.get('body', '{}'))
-        card_id = body_data.get('id')
+        card_id = body_data.get('id') or body_data.get('cardId')
         
         if 'learned' in body_data:
             cur.execute(
                 "UPDATE cards SET learned = %s WHERE id = %s AND user_id = %s",
                 (body_data['learned'], card_id, user_id)
+            )
+        elif 'russian' in body_data and 'english' in body_data:
+            russian = body_data.get('russian', '')
+            english = body_data.get('english', '')
+            russian_example = body_data.get('russianExample', '')
+            english_example = body_data.get('englishExample', '')
+            category_id = body_data.get('categoryId')
+            
+            cur.execute(
+                "SELECT id FROM global_words WHERE russian = %s AND english = %s",
+                (russian, english)
+            )
+            existing_word = cur.fetchone()
+            
+            if existing_word:
+                word_id = existing_word[0]
+                cur.execute(
+                    "UPDATE global_words SET russian_example = %s, english_example = %s WHERE id = %s",
+                    (russian_example, english_example, word_id)
+                )
+            else:
+                cur.execute(
+                    "INSERT INTO global_words (russian, english, russian_example, english_example) VALUES (%s, %s, %s, %s) RETURNING id",
+                    (russian, english, russian_example, english_example)
+                )
+                word_id = cur.fetchone()[0]
+            
+            cur.execute(
+                "UPDATE cards SET word_id = %s, category_id = %s WHERE id = %s AND user_id = %s",
+                (word_id, category_id, card_id, user_id)
             )
         
         conn.commit()
@@ -135,8 +165,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     
     elif method == 'DELETE':
-        query_params = event.get('queryStringParameters', {})
-        card_id = query_params.get('id')
+        body_data = json.loads(event.get('body', '{}'))
+        card_id = body_data.get('cardId') or body_data.get('id')
+        
+        if not card_id:
+            query_params = event.get('queryStringParameters', {})
+            card_id = query_params.get('id')
         
         cur.execute(
             "DELETE FROM cards WHERE id = %s AND user_id = %s",
