@@ -102,6 +102,56 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     
     elif action == 'login':
+        # Проверяем, не админ ли это
+        cur.execute(
+            "SELECT id, username FROM admins WHERE username = %s",
+            (username,)
+        )
+        admin = cur.fetchone()
+        
+        if admin:
+            # Для админа с дефолтным паролем 'admin' обновляем хеш
+            cur.execute(
+                "SELECT password_hash FROM admins WHERE id = %s",
+                (admin[0],)
+            )
+            stored_hash = cur.fetchone()[0]
+            
+            if stored_hash == 'admin':
+                # Первый вход - обновляем на хеш
+                cur.execute(
+                    "UPDATE admins SET password_hash = %s WHERE id = %s",
+                    (password_hash, admin[0])
+                )
+                conn.commit()
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'userId': admin[0], 'username': admin[1], 'isAdmin': True}),
+                    'isBase64Encoded': False
+                }
+            elif stored_hash == password_hash:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'userId': admin[0], 'username': admin[1], 'isAdmin': True}),
+                    'isBase64Encoded': False
+                }
+            else:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 401,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Invalid credentials'}),
+                    'isBase64Encoded': False
+                }
+        
+        # Обычный пользователь
         cur.execute(
             "SELECT id, username FROM users WHERE username = %s AND password_hash = %s",
             (username, password_hash)
@@ -121,7 +171,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'userId': user[0], 'username': user[1]}),
+            'body': json.dumps({'userId': user[0], 'username': user[1], 'isAdmin': False}),
             'isBase64Encoded': False
         }
     

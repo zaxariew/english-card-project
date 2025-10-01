@@ -36,7 +36,7 @@ type Category = {
 };
 
 export default function Index() {
-  const [user, setUser] = useState<{ id: number; username: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; isAdmin: boolean } | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
@@ -125,7 +125,7 @@ export default function Index() {
       const data = await response.json();
 
       if (response.ok) {
-        const userData = { id: data.userId, username: data.username };
+        const userData = { id: data.userId, username: data.username, isAdmin: data.isAdmin || false };
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         setShowAuth(false);
@@ -152,7 +152,10 @@ export default function Index() {
   const loadCategories = async (userId: number) => {
     try {
       const response = await fetch(API_URLS.categories, {
-        headers: { 'X-User-Id': userId.toString() },
+        headers: { 
+          'X-User-Id': userId.toString(),
+          'X-Is-Admin': user?.isAdmin ? 'true' : 'false'
+        },
       });
       const data = await response.json();
       setCategories(data.categories || []);
@@ -167,7 +170,10 @@ export default function Index() {
   const loadCards = async (userId: number) => {
     try {
       const response = await fetch(API_URLS.cards, {
-        headers: { 'X-User-Id': userId.toString() },
+        headers: { 
+          'X-User-Id': userId.toString(),
+          'X-Is-Admin': user?.isAdmin ? 'true' : 'false'
+        },
       });
       const data = await response.json();
       setCards(data.cards || []);
@@ -188,6 +194,7 @@ export default function Index() {
         headers: {
           'Content-Type': 'application/json',
           'X-User-Id': user.id.toString(),
+          'X-Is-Admin': user.isAdmin ? 'true' : 'false',
         },
         body: JSON.stringify(newCategory),
       });
@@ -247,10 +254,7 @@ export default function Index() {
       return;
     }
 
-    if (!newCard.categoryId || newCard.categoryId === 0) {
-      toast.error('Выберите категорию');
-      return;
-    }
+
 
     try {
       const response = await fetch(API_URLS.cards, {
@@ -258,6 +262,7 @@ export default function Index() {
         headers: {
           'Content-Type': 'application/json',
           'X-User-Id': user.id.toString(),
+          'X-Is-Admin': user.isAdmin ? 'true' : 'false',
         },
         body: JSON.stringify(newCard),
       });
@@ -303,6 +308,7 @@ export default function Index() {
         headers: {
           'Content-Type': 'application/json',
           'X-User-Id': user.id.toString(),
+          'X-Is-Admin': user.isAdmin ? 'true' : 'false',
         },
         body: JSON.stringify({
           cardId: editingCard.id,
@@ -332,6 +338,7 @@ export default function Index() {
         headers: {
           'Content-Type': 'application/json',
           'X-User-Id': user.id.toString(),
+          'X-Is-Admin': user.isAdmin ? 'true' : 'false',
         },
         body: JSON.stringify({ cardId }),
       });
@@ -359,6 +366,7 @@ export default function Index() {
         headers: {
           'Content-Type': 'application/json',
           'X-User-Id': user.id.toString(),
+          'X-Is-Admin': user.isAdmin ? 'true' : 'false',
         },
         body: JSON.stringify({
           id: currentCard.id,
@@ -466,13 +474,14 @@ export default function Index() {
               <Icon name="BookOpen" size={64} className="mx-auto mb-4 text-gray-400" />
               <h2 className="text-2xl font-bold mb-4">Нет карточек</h2>
               <p className="text-gray-600 mb-6">Добавь свою первую карточку для изучения английского!</p>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Icon name="Plus" size={18} />
-                    Добавить карточку
-                  </Button>
-                </DialogTrigger>
+              {user?.isAdmin && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Icon name="Plus" size={18} />
+                      Добавить карточку
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Новая карточка</DialogTitle>
@@ -511,8 +520,15 @@ export default function Index() {
                       />
                     </div>
                     <div>
-                      <Label>Категория</Label>
+                      <Label>Категория (необязательно)</Label>
                       <div className="grid grid-cols-2 gap-2 mt-2">
+                        <Button
+                          variant={!newCard.categoryId || newCard.categoryId === 0 ? 'default' : 'outline'}
+                          onClick={() => setNewCard({ ...newCard, categoryId: 0 })}
+                          className="w-full"
+                        >
+                          Без категории
+                        </Button>
                         {categories.map((cat) => (
                           <Button
                             key={cat.id}
@@ -530,7 +546,8 @@ export default function Index() {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -579,13 +596,14 @@ export default function Index() {
               <div className="text-sm text-gray-500">
                 Карточка {currentCardIndex + 1} из {cards.length}
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Icon name="Plus" size={18} />
-                    Добавить карточку
-                  </Button>
-                </DialogTrigger>
+              {user?.isAdmin && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Icon name="Plus" size={18} />
+                      Добавить карточку
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Новая карточка</DialogTitle>
@@ -636,8 +654,15 @@ export default function Index() {
                       />
                     </div>
                     <div>
-                      <Label>Категория</Label>
+                      <Label>Категория (необязательно)</Label>
                       <div className="grid grid-cols-2 gap-2 mt-2">
+                        <Button
+                          variant={!newCard.categoryId || newCard.categoryId === 0 ? 'default' : 'outline'}
+                          onClick={() => setNewCard({ ...newCard, categoryId: 0 })}
+                          className="w-full"
+                        >
+                          Без категории
+                        </Button>
                         {categories.map((cat) => (
                           <Button
                             key={cat.id}
@@ -655,7 +680,8 @@ export default function Index() {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              )}
             </div>
 
             <div className="perspective-1000 max-w-2xl mx-auto">
@@ -821,29 +847,33 @@ export default function Index() {
                     <div className="flex items-start justify-between mb-3">
                       <Badge className={card.categoryColor}>{card.categoryName}</Badge>
                       <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingCard(card);
-                            setEditDialogOpen(true);
-                          }}
-                        >
-                          <Icon name="Pencil" size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-red-500 hover:text-red-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCard(card.id);
-                          }}
-                        >
-                          <Icon name="Trash2" size={14} />
-                        </Button>
+                        {user?.isAdmin && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingCard(card);
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              <Icon name="Pencil" size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-red-500 hover:text-red-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCard(card.id);
+                              }}
+                            >
+                              <Icon name="Trash2" size={14} />
+                            </Button>
+                          </>
+                        )}
                         {card.learned && (
                           <Icon name="CheckCircle2" size={18} className="text-green-500" />
                         )}
@@ -952,13 +982,14 @@ export default function Index() {
 
           <TabsContent value="categories" className="space-y-6 animate-fade-in">
             <div className="flex justify-end mb-4">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Icon name="Plus" size={18} />
-                    Добавить категорию
-                  </Button>
-                </DialogTrigger>
+              {user?.isAdmin && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Icon name="Plus" size={18} />
+                      Добавить категорию
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Новая категория</DialogTitle>
@@ -993,7 +1024,8 @@ export default function Index() {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -18,7 +18,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id',
+                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Is-Admin',
                 'Access-Control-Max-Age': '86400'
             },
             'body': '',
@@ -27,6 +27,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     headers = event.get('headers', {})
     user_id = headers.get('X-User-Id') or headers.get('x-user-id')
+    is_admin = headers.get('X-Is-Admin') or headers.get('x-is-admin')
+    is_admin = is_admin == 'true' if is_admin else False
     
     if not user_id:
         return {
@@ -65,6 +67,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     
     elif method == 'POST':
+        if not is_admin:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Admin access required'}),
+                'isBase64Encoded': False
+            }
+        
         body_data = json.loads(event.get('body', '{}'))
         name = body_data.get('name', '').strip()
         color = body_data.get('color', 'bg-gradient-to-br from-gray-500 to-gray-600')

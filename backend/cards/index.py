@@ -18,7 +18,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id',
+                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Is-Admin',
                 'Access-Control-Max-Age': '86400'
             },
             'body': '',
@@ -27,6 +27,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     headers = event.get('headers', {})
     user_id = headers.get('X-User-Id') or headers.get('x-user-id')
+    is_admin = headers.get('X-Is-Admin') or headers.get('x-is-admin')
+    is_admin = is_admin == 'true' if is_admin else False
     
     if not user_id:
         return {
@@ -45,7 +47,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             SELECT c.id, gw.russian, gw.russian_example, gw.english, gw.english_example, 
                    c.learned, cat.id, cat.name, cat.color
             FROM cards c
-            JOIN categories cat ON c.category_id = cat.id
+            LEFT JOIN categories cat ON c.category_id = cat.id
             LEFT JOIN global_words gw ON c.word_id = gw.id
             WHERE c.user_id = %s
             ORDER BY c.created_at DESC
@@ -60,9 +62,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'english': row[3] or '',
                 'englishExample': row[4] or '',
                 'learned': row[5],
-                'categoryId': row[6],
-                'categoryName': row[7],
-                'categoryColor': row[8]
+                'categoryId': row[6] if row[6] else None,
+                'categoryName': row[7] if row[7] else None,
+                'categoryColor': row[8] if row[8] else None
             })
         
         cur.close()
@@ -76,11 +78,22 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     
     elif method == 'POST':
+        if not is_admin:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Admin access required'}),
+                'isBase64Encoded': False
+            }
+        
         body_data = json.loads(event.get('body', '{}'))
         russian = body_data.get('russian', '')
         english = body_data.get('english', '')
         russian_example = body_data.get('russianExample', '')
         english_example = body_data.get('englishExample', '')
+        category_id = body_data.get('categoryId')
         
         cur.execute("SELECT id FROM global_words WHERE russian = %s", (russian,))
         existing_word = cur.fetchone()
@@ -98,7 +111,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         cur.execute(
             """INSERT INTO cards (user_id, category_id, word_id, russian, english, russian_example, english_example, learned) 
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-            (user_id, body_data['categoryId'], word_id, russian, english, russian_example, english_example, False)
+            (user_id, category_id if category_id else None, word_id, russian, english, russian_example, english_example, False)
         )
         
         card_id = cur.fetchone()[0]
@@ -165,6 +178,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     
     elif method == 'DELETE':
+        if not is_admin:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Admin access required'}),
+                'isBase64Encoded': False
+            }
+        
         body_data = json.loads(event.get('body', '{}'))
         card_id = body_data.get('cardId') or body_data.get('id')
         
