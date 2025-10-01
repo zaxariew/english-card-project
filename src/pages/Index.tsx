@@ -81,6 +81,12 @@ export default function Index() {
     }
   }, []);
 
+  useEffect(() => {
+    if (categories.length > 0 && newCard.categoryId === 0) {
+      setNewCard((prev) => ({ ...prev, categoryId: categories[0].id }));
+    }
+  }, [categories]);
+
   const speak = (text: string, lang: 'ru-RU' | 'en-US') => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -238,6 +244,11 @@ export default function Index() {
   const handleAddCard = async () => {
     if (!user || !newCard.russian || !newCard.english) {
       toast.error('Заполните русское и английское слово');
+      return;
+    }
+
+    if (!newCard.categoryId || newCard.categoryId === 0) {
+      toast.error('Выберите категорию');
       return;
     }
 
