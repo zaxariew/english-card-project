@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -100,8 +100,31 @@ export default function Index() {
   const learnedCount = cards.filter((c) => c.learned).length;
   const progressPercentage = (learnedCount / cards.length) * 100;
 
+  const speak = (text: string, lang: 'ru-RU' | 'en-US') => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  useEffect(() => {
+    if (currentCard && !isFlipped) {
+      speak(currentCard.russian, 'ru-RU');
+    } else if (currentCard && isFlipped) {
+      speak(currentCard.english, 'en-US');
+    }
+  }, [currentCardIndex, isFlipped]);
+
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
+  };
+
+  const playSound = (text: string, lang: 'ru-RU' | 'en-US') => {
+    speak(text, lang);
   };
 
   const handleNext = () => {
@@ -300,10 +323,36 @@ export default function Index() {
                     <Badge className="mb-4 bg-white/20 backdrop-blur-sm">
                       {categoryLabels[currentCard.category]}
                     </Badge>
-                    <h2 className="text-6xl font-bold mb-4">{currentCard.russian}</h2>
-                    <p className="text-xl opacity-90 italic">
-                      "{currentCard.russianExample}"
-                    </p>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h2 className="text-6xl font-bold">{currentCard.russian}</h2>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound(currentCard.russian, 'ru-RU');
+                        }}
+                      >
+                        <Icon name="Volume2" size={32} />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl opacity-90 italic">
+                        "{currentCard.russianExample}"
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/20 h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound(currentCard.russianExample, 'ru-RU');
+                        }}
+                      >
+                        <Icon name="Volume2" size={20} />
+                      </Button>
+                    </div>
                     <p className="text-sm opacity-70 mt-8">Нажми, чтобы перевернуть</p>
                   </CardContent>
                 </Card>
@@ -321,10 +370,36 @@ export default function Index() {
                     <Badge className="mb-4 bg-white/20 backdrop-blur-sm">
                       {categoryLabels[currentCard.category]}
                     </Badge>
-                    <h2 className="text-6xl font-bold mb-4">{currentCard.english}</h2>
-                    <p className="text-xl opacity-90 italic">
-                      "{currentCard.englishExample}"
-                    </p>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h2 className="text-6xl font-bold">{currentCard.english}</h2>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound(currentCard.english, 'en-US');
+                        }}
+                      >
+                        <Icon name="Volume2" size={32} />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl opacity-90 italic">
+                        "{currentCard.englishExample}"
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/20 h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound(currentCard.englishExample, 'en-US');
+                        }}
+                      >
+                        <Icon name="Volume2" size={20} />
+                      </Button>
+                    </div>
                     <p className="text-sm opacity-70 mt-8">Нажми, чтобы перевернуть</p>
                   </CardContent>
                 </Card>
