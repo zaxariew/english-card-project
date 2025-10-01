@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: API for managing user word cards (CRUD operations)
+    Business: API for managing user word cards with global dictionary
     Args: event - dict with httpMethod, body, headers with X-User-Id
           context - object with request_id
     Returns: HTTP response with cards data
@@ -42,10 +42,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     if method == 'GET':
         cur.execute("""
-            SELECT c.id, c.russian, c.russian_example, c.english, c.english_example, 
+            SELECT c.id, gw.russian, gw.russian_example, gw.english, gw.english_example, 
                    c.learned, cat.id, cat.name, cat.color
             FROM cards c
             JOIN categories cat ON c.category_id = cat.id
+            LEFT JOIN global_words gw ON c.word_id = gw.id
             WHERE c.user_id = %s
             ORDER BY c.created_at DESC
         """, (user_id,))
@@ -54,10 +55,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         for row in cur.fetchall():
             cards.append({
                 'id': row[0],
-                'russian': row[1],
-                'russianExample': row[2],
-                'english': row[3],
-                'englishExample': row[4],
+                'russian': row[1] or '',
+                'russianExample': row[2] or '',
+                'english': row[3] or '',
+                'englishExample': row[4] or '',
                 'learned': row[5],
                 'categoryId': row[6],
                 'categoryName': row[7],
@@ -76,15 +77,28 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     elif method == 'POST':
         body_data = json.loads(event.get('body', '{}'))
+        russian = body_data.get('russian', '')
+        english = body_data.get('english', '')
+        russian_example = body_data.get('russianExample', '')
+        english_example = body_data.get('englishExample', '')
+        
+        cur.execute("SELECT id FROM global_words WHERE russian = %s", (russian,))
+        existing_word = cur.fetchone()
+        
+        if existing_word:
+            word_id = existing_word[0]
+        else:
+            cur.execute(
+                """INSERT INTO global_words (russian, english, russian_example, english_example) 
+                   VALUES (%s, %s, %s, %s) RETURNING id""",
+                (russian, english, russian_example, english_example)
+            )
+            word_id = cur.fetchone()[0]
         
         cur.execute(
-            """INSERT INTO cards 
-               (user_id, category_id, russian, russian_example, english, english_example, learned) 
-               VALUES (%s, %s, %s, %s, %s, %s, %s) 
-               RETURNING id""",
-            (user_id, body_data['categoryId'], body_data['russian'], 
-             body_data.get('russianExample', ''), body_data['english'], 
-             body_data.get('englishExample', ''), False)
+            """INSERT INTO cards (user_id, category_id, word_id, learned) 
+               VALUES (%s, %s, %s, %s) RETURNING id""",
+            (user_id, body_data['categoryId'], word_id, False)
         )
         
         card_id = cur.fetchone()[0]

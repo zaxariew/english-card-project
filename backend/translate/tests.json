@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "Translate Russian word",
+      "method": "POST",
+      "body": {
+        "russian": "кот"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "english": "string",
+        "russianExample": "string",
+        "englishExample": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

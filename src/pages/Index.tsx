@@ -14,6 +14,7 @@ const API_URLS = {
   auth: 'https://functions.poehali.dev/d31f6748-ce3c-44a4-abfa-4271917daac9',
   categories: 'https://functions.poehali.dev/30beca39-899a-4ba5-9f24-b4faa5bcf740',
   cards: 'https://functions.poehali.dev/98633d20-1c13-4175-9b6c-e7cbed102a76',
+  translate: 'https://functions.poehali.dev/671e36e0-fbd9-46ff-a494-a599c851fdd8',
 };
 
 type WordCard = {
@@ -54,6 +55,8 @@ export default function Index() {
     englishExample: '',
     categoryId: 0,
   });
+  
+  const [isTranslating, setIsTranslating] = useState(false);
   
   const [newCategory, setNewCategory] = useState({
     name: '',
@@ -192,6 +195,41 @@ export default function Index() {
       }
     } catch (error) {
       toast.error('Ошибка соединения');
+    }
+  };
+
+  const handleTranslate = async () => {
+    if (!newCard.russian.trim()) {
+      toast.error('Введите русское слово');
+      return;
+    }
+
+    setIsTranslating(true);
+
+    try {
+      const response = await fetch(API_URLS.translate, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ russian: newCard.russian }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setNewCard({
+          ...newCard,
+          english: data.english,
+          russianExample: data.russianExample,
+          englishExample: data.englishExample,
+        });
+        toast.success('Перевод готов!');
+      } else {
+        toast.error(data.error || 'Ошибка перевода');
+      }
+    } catch (error) {
+      toast.error('Ошибка соединения');
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -485,7 +523,19 @@ export default function Index() {
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     <div>
-                      <Label>Русское слово</Label>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label>Русское слово</Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTranslate}
+                          disabled={isTranslating || !newCard.russian.trim()}
+                          className="gap-2"
+                        >
+                          <Icon name={isTranslating ? 'Loader2' : 'Sparkles'} size={16} className={isTranslating ? 'animate-spin' : ''} />
+                          {isTranslating ? 'Перевожу...' : 'AI'}
+                        </Button>
+                      </div>
                       <Input
                         value={newCard.russian}
                         onChange={(e) => setNewCard({ ...newCard, russian: e.target.value })}
