@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "Get user categories",
+      "method": "GET",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "categories": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
