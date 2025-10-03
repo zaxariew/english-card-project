@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "Get accounts list - admin access",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-Is-Admin": "true"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "users": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get accounts list - non-admin denied",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-Is-Admin": "false"
+      },
+      "expectedStatus": 403,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

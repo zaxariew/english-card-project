@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: API for managing user word cards with global dictionary
+    Business: API for managing shared word cards library with user progress tracking
     Args: event - dict with httpMethod, body, headers with X-User-Id
           context - object with request_id
     Returns: HTTP response with cards data
@@ -44,12 +44,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     if method == 'GET':
         cur.execute("""
-            SELECT c.id, gw.russian, gw.russian_example, gw.english, gw.english_example, 
-                   c.learned, cat.id, cat.name, cat.color
+            SELECT c.id, c.russian, c.russian_example, c.english, c.english_example, 
+                   COALESCE(up.is_learned, FALSE) as is_learned,
+                   cat.id, cat.name, cat.color
             FROM cards c
             LEFT JOIN categories cat ON c.category_id = cat.id
-            LEFT JOIN global_words gw ON c.word_id = gw.id
-            WHERE c.user_id = %s
+            LEFT JOIN user_progress up ON c.id = up.card_id AND up.user_id = %s
             ORDER BY c.created_at DESC
         """, (user_id,))
         
@@ -95,23 +95,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         english_example = body_data.get('englishExample', '')
         category_id = body_data.get('categoryId')
         
-        cur.execute("SELECT id FROM global_words WHERE russian = %s", (russian,))
-        existing_word = cur.fetchone()
-        
-        if existing_word:
-            word_id = existing_word[0]
-        else:
-            cur.execute(
-                """INSERT INTO global_words (russian, english, russian_example, english_example) 
-                   VALUES (%s, %s, %s, %s) RETURNING id""",
-                (russian, english, russian_example, english_example)
-            )
-            word_id = cur.fetchone()[0]
-        
         cur.execute(
-            """INSERT INTO cards (user_id, category_id, word_id, russian, english, russian_example, english_example, learned) 
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-            (user_id, category_id if category_id else None, word_id, russian, english, russian_example, english_example, False)
+            """INSERT INTO cards (category_id, russian, english, russian_example, english_example) 
+               VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+            (category_id if category_id else None, russian, english, russian_example, english_example)
         )
         
         card_id = cur.fetchone()[0]
@@ -132,10 +119,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         if 'learned' in body_data:
             cur.execute(
-                "UPDATE cards SET learned = %s WHERE id = %s AND user_id = %s",
-                (body_data['learned'], card_id, user_id)
+                """INSERT INTO user_progress (user_id, card_id, is_learned, updated_at) 
+                   VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                   ON CONFLICT (user_id, card_id) 
+                   DO UPDATE SET is_learned = %s, updated_at = CURRENT_TIMESTAMP""",
+                (user_id, card_id, body_data['learned'], body_data['learned'])
             )
-        elif 'russian' in body_data and 'english' in body_data:
+        elif is_admin and ('russian' in body_data and 'english' in body_data):
             russian = body_data.get('russian', '')
             english = body_data.get('english', '')
             russian_example = body_data.get('russianExample', '')
@@ -143,27 +133,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             category_id = body_data.get('categoryId')
             
             cur.execute(
-                "SELECT id FROM global_words WHERE russian = %s AND english = %s",
-                (russian, english)
-            )
-            existing_word = cur.fetchone()
-            
-            if existing_word:
-                word_id = existing_word[0]
-                cur.execute(
-                    "UPDATE global_words SET russian_example = %s, english_example = %s WHERE id = %s",
-                    (russian_example, english_example, word_id)
-                )
-            else:
-                cur.execute(
-                    "INSERT INTO global_words (russian, english, russian_example, english_example) VALUES (%s, %s, %s, %s) RETURNING id",
-                    (russian, english, russian_example, english_example)
-                )
-                word_id = cur.fetchone()[0]
-            
-            cur.execute(
-                "UPDATE cards SET word_id = %s, category_id = %s WHERE id = %s AND user_id = %s",
-                (word_id, category_id, card_id, user_id)
+                "UPDATE cards SET russian = %s, english = %s, russian_example = %s, english_example = %s, category_id = %s WHERE id = %s",
+                (russian, english, russian_example, english_example, category_id, card_id)
             )
         
         conn.commit()
@@ -195,10 +166,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             query_params = event.get('queryStringParameters', {})
             card_id = query_params.get('id')
         
-        cur.execute(
-            "DELETE FROM cards WHERE id = %s AND user_id = %s",
-            (card_id, user_id)
-        )
+        cur.execute("DELETE FROM cards WHERE id = %s", (card_id,))
         
         conn.commit()
         cur.close()

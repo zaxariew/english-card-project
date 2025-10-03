@@ -15,6 +15,16 @@ const API_URLS = {
   categories: 'https://functions.poehali.dev/30beca39-899a-4ba5-9f24-b4faa5bcf740',
   cards: 'https://functions.poehali.dev/98633d20-1c13-4175-9b6c-e7cbed102a76',
   translate: 'https://functions.poehali.dev/671e36e0-fbd9-46ff-a494-a599c851fdd8',
+  accounts: 'https://functions.poehali.dev/5c9631a9-7bf7-47d0-a949-aaacd6de409f',
+};
+
+type UserAccount = {
+  id: number;
+  username: string;
+  createdAt: string;
+  cardsLearned: number;
+  totalCards: number;
+  progress: number;
 };
 
 type WordCard = {
@@ -64,6 +74,8 @@ export default function Index() {
     name: '',
     color: 'bg-gradient-to-br from-gray-500 to-gray-600',
   });
+  
+  const [accounts, setAccounts] = useState<UserAccount[]>([]);
 
   const currentCard = cards[currentCardIndex];
   const learnedCount = cards.filter((c) => c.learned).length;
@@ -74,6 +86,9 @@ export default function Index() {
     if (savedUser) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
+      if (userData.isAdmin) {
+        loadAccounts();
+      }
       loadCategories(userData.id);
       loadCards(userData.id);
     } else {
@@ -130,6 +145,9 @@ export default function Index() {
         localStorage.setItem('user', JSON.stringify(userData));
         setShowAuth(false);
         toast.success(authMode === 'login' ? 'Вход выполнен!' : 'Регистрация успешна!');
+        if (userData.isAdmin) {
+          loadAccounts();
+        }
         loadCategories(data.userId);
         loadCards(data.userId);
       } else {
@@ -179,6 +197,22 @@ export default function Index() {
       setCards(data.cards || []);
     } catch (error) {
       toast.error('Ошибка загрузки карточек');
+    }
+  };
+
+  const loadAccounts = async () => {
+    if (!user?.isAdmin) return;
+    
+    try {
+      const response = await fetch(API_URLS.accounts, {
+        headers: {
+          'X-Is-Admin': 'true'
+        },
+      });
+      const data = await response.json();
+      setAccounts(data.users || []);
+    } catch (error) {
+      console.error('Ошибка загрузки аккаунтов:', error);
     }
   };
 
@@ -571,26 +605,46 @@ export default function Index() {
           </Button>
         </header>
 
-        <Tabs defaultValue="cards" className="w-full">
+        <Tabs defaultValue={user?.isAdmin ? "dictionary" : "cards"} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-8 h-auto">
-            <TabsTrigger value="cards" className="gap-2 py-3">
-              <Icon name="CreditCard" size={18} />
-              Карточки
-            </TabsTrigger>
-            <TabsTrigger value="dictionary" className="gap-2 py-3">
-              <Icon name="Book" size={18} />
-              Словарь
-            </TabsTrigger>
-            <TabsTrigger value="progress" className="gap-2 py-3">
-              <Icon name="TrendingUp" size={18} />
-              Прогресс
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="gap-2 py-3">
-              <Icon name="Layers" size={18} />
-              Категории
-            </TabsTrigger>
+            {user?.isAdmin ? (
+              <>
+                <TabsTrigger value="dictionary" className="gap-2 py-3">
+                  <Icon name="Book" size={18} />
+                  Библиотека
+                </TabsTrigger>
+                <TabsTrigger value="progress" className="gap-2 py-3">
+                  <Icon name="Users" size={18} />
+                  Аккаунты
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="gap-2 py-3">
+                  <Icon name="Layers" size={18} />
+                  Категории
+                </TabsTrigger>
+              </>
+            ) : (
+              <>
+                <TabsTrigger value="cards" className="gap-2 py-3">
+                  <Icon name="CreditCard" size={18} />
+                  Карточки
+                </TabsTrigger>
+                <TabsTrigger value="dictionary" className="gap-2 py-3">
+                  <Icon name="Book" size={18} />
+                  Словарь
+                </TabsTrigger>
+                <TabsTrigger value="progress" className="gap-2 py-3">
+                  <Icon name="TrendingUp" size={18} />
+                  Прогресс
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="gap-2 py-3">
+                  <Icon name="Layers" size={18} />
+                  Категории
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
+          {!user?.isAdmin && (
           <TabsContent value="cards" className="space-y-6 animate-scale-in">
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-500">
@@ -801,6 +855,7 @@ export default function Index() {
               </Button>
             </div>
           </TabsContent>
+          )}
 
           <TabsContent value="dictionary" className="space-y-6 animate-fade-in">
             <div className="flex gap-4">
@@ -896,6 +951,51 @@ export default function Index() {
           </TabsContent>
 
           <TabsContent value="progress" className="space-y-6 animate-fade-in">
+            {user?.isAdmin ? (
+              <Card>
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold mb-6">Аккаунты пользователей</h3>
+                  <div className="space-y-3">
+                    {accounts.map((account) => (
+                      <Card key={account.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-3">
+                                <Icon name="User" size={24} className="text-purple-600" />
+                                <div>
+                                  <h4 className="font-semibold text-lg">{account.username}</h4>
+                                  <p className="text-xs text-gray-500">
+                                    Зарегистрирован: {new Date(account.createdAt).toLocaleDateString('ru-RU')}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">Прогресс обучения</span>
+                                  <span className="font-semibold">
+                                    {account.cardsLearned} / {account.totalCards} карточек
+                                  </span>
+                                </div>
+                                <Progress value={account.progress} className="h-2" />
+                                <p className="text-xs text-right text-gray-500">{account.progress}%</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {accounts.length === 0 && (
+                      <div className="text-center py-12 text-gray-500">
+                        <Icon name="Users" size={48} className="mx-auto mb-4 opacity-50" />
+                        <p>Пока нет зарегистрированных пользователей</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
             <Card>
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold mb-4">Общий прогресс</h3>
@@ -978,6 +1078,8 @@ export default function Index() {
                 </div>
               </CardContent>
             </Card>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="categories" className="space-y-6 animate-fade-in">
