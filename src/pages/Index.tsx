@@ -104,16 +104,26 @@ export default function Index() {
     if (savedUser) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
-      if (userData.isAdmin) {
-        loadAccounts();
-      }
-      loadCategories(userData.id);
-      loadCards(userData.id);
-      loadGroups();
     } else {
       setShowAuth(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      if (user.isAdmin) {
+        loadAccounts();
+      }
+      loadCategories(user.id);
+      loadGroups();
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      loadCards(user.id, selectedGroupId);
+    }
+  }, [user?.id, selectedGroupId]);
 
   useEffect(() => {
     if (categories.length > 0 && newCard.categoryId === 0) {
@@ -463,18 +473,6 @@ export default function Index() {
     }
   };
 
-  useEffect(() => {
-    if (user?.isAdmin) {
-      loadGroups();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      loadCards(user.id, selectedGroupId);
-    }
-  }, [selectedGroupId]);
-
   const handleAddGroup = async () => {
     if (!user || !newGroup.name.trim()) return;
     try {
@@ -605,7 +603,7 @@ export default function Index() {
     );
   }
 
-  if (!currentCard) {
+  if (!currentCard && !user?.isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
         <div className="container mx-auto px-4 py-8">
@@ -891,12 +889,12 @@ export default function Index() {
                 }}
               >
                 <Card
-                  className={`absolute w-full h-full ${currentCard.categoryColor} text-white shadow-2xl backface-hidden hover:shadow-3xl transition-shadow`}
+                  className={`absolute w-full h-full ${currentCard.categoryColor || 'bg-gradient-to-br from-purple-500 to-purple-600'} text-white shadow-2xl backface-hidden hover:shadow-3xl transition-shadow`}
                   style={{ backfaceVisibility: 'hidden' }}
                 >
                   <CardContent className="flex flex-col items-center justify-center h-full p-8">
                     <Badge className="mb-4 bg-white/20 backdrop-blur-sm">
-                      {currentCard.categoryName}
+                      {currentCard.categoryName || 'Без категории'}
                     </Badge>
                     <div className="flex items-center gap-3 mb-4">
                       <h2 className="text-6xl font-bold">{currentCard.russian}</h2>
@@ -931,7 +929,7 @@ export default function Index() {
                 </Card>
 
                 <Card
-                  className={`absolute w-full h-full ${currentCard.categoryColor} text-white shadow-2xl backface-hidden`}
+                  className={`absolute w-full h-full ${currentCard.categoryColor || 'bg-gradient-to-br from-purple-500 to-purple-600'} text-white shadow-2xl backface-hidden`}
                   style={{
                     backfaceVisibility: 'hidden',
                     transform: 'rotateY(180deg)',
@@ -939,7 +937,7 @@ export default function Index() {
                 >
                   <CardContent className="flex flex-col items-center justify-center h-full p-8">
                     <Badge className="mb-4 bg-white/20 backdrop-blur-sm">
-                      {currentCard.categoryName}
+                      {currentCard.categoryName || 'Без категории'}
                     </Badge>
                     <div className="flex items-center gap-3 mb-4">
                       <h2 className="text-6xl font-bold">{currentCard.english}</h2>
@@ -1127,7 +1125,7 @@ export default function Index() {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
-                      <Badge className={card.categoryColor}>{card.categoryName}</Badge>
+                      <Badge className={card.categoryColor || 'bg-gray-500'}>{card.categoryName || 'Без категории'}</Badge>
                       <div className="flex gap-1">
                         {user?.isAdmin && (
                           <>
