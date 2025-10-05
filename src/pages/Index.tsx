@@ -998,6 +998,93 @@ export default function Index() {
           )}
 
           <TabsContent value="dictionary" className="space-y-6 animate-fade-in">
+            {user?.isAdmin && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="gap-2 mb-4">
+                    <Icon name="Plus" size={18} />
+                    Добавить карточку
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Новая карточка</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label>Русское слово</Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTranslate}
+                          disabled={isTranslating || !newCard.russian.trim()}
+                          className="gap-2"
+                        >
+                          <Icon name={isTranslating ? 'Loader2' : 'Sparkles'} size={16} className={isTranslating ? 'animate-spin' : ''} />
+                          {isTranslating ? 'Перевожу...' : 'AI'}
+                        </Button>
+                      </div>
+                      <Input
+                        value={newCard.russian}
+                        onChange={(e) => setNewCard({ ...newCard, russian: e.target.value })}
+                        placeholder="Кот"
+                      />
+                    </div>
+                    <div>
+                      <Label>Пример (рус)</Label>
+                      <Input
+                        value={newCard.russianExample}
+                        onChange={(e) => setNewCard({ ...newCard, russianExample: e.target.value })}
+                        placeholder="У меня есть кот"
+                      />
+                    </div>
+                    <div>
+                      <Label>Английское слово</Label>
+                      <Input
+                        value={newCard.english}
+                        onChange={(e) => setNewCard({ ...newCard, english: e.target.value })}
+                        placeholder="Cat"
+                      />
+                    </div>
+                    <div>
+                      <Label>Пример (англ)</Label>
+                      <Input
+                        value={newCard.englishExample}
+                        onChange={(e) => setNewCard({ ...newCard, englishExample: e.target.value })}
+                        placeholder="I have a cat"
+                      />
+                    </div>
+                    <div>
+                      <Label>Категория (необязательно)</Label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <Button
+                          variant={!newCard.categoryId || newCard.categoryId === 0 ? 'default' : 'outline'}
+                          onClick={() => setNewCard({ ...newCard, categoryId: 0 })}
+                          className="w-full"
+                        >
+                          Без категории
+                        </Button>
+                        {categories.map((cat) => (
+                          <Button
+                            key={cat.id}
+                            variant={newCard.categoryId === cat.id ? 'default' : 'outline'}
+                            onClick={() => setNewCard({ ...newCard, categoryId: cat.id })}
+                            className="w-full"
+                          >
+                            {cat.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <Button onClick={handleAddCard} className="w-full">
+                      Добавить
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            
             <div className="flex gap-4">
               <div className="relative flex-1">
                 <Icon
