@@ -43,15 +43,63 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     cur = conn.cursor()
     
     if method == 'GET':
-        cur.execute("""
-            SELECT c.id, c.russian, c.russian_example, c.english, c.english_example, 
-                   COALESCE(up.is_learned, FALSE) as is_learned,
-                   cat.id, cat.name, cat.color
-            FROM cards c
-            LEFT JOIN categories cat ON c.category_id = cat.id
-            LEFT JOIN user_progress up ON c.id = up.card_id AND up.user_id = %s
-            ORDER BY c.created_at DESC
-        """, (user_id,))
+        query_params = event.get('queryStringParameters', {})
+        resource = query_params.get('resource')
+        group_id = query_params.get('groupId')
+        
+        if resource == 'groups':
+            cur.execute("""
+                SELECT g.id, g.name, g.description, g.color, g.created_at,
+                       COUNT(cg.card_id) as card_count
+                FROM groups g
+                LEFT JOIN card_groups cg ON g.id = cg.group_id
+                GROUP BY g.id, g.name, g.description, g.color, g.created_at
+                ORDER BY g.created_at DESC
+            """)
+            
+            groups = []
+            for row in cur.fetchall():
+                groups.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'description': row[2] or '',
+                    'color': row[3],
+                    'createdAt': row[4].isoformat() if row[4] else None,
+                    'cardCount': row[5]
+                })
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'groups': groups}),
+                'isBase64Encoded': False
+            }
+        
+        if group_id:
+            cur.execute("""
+                SELECT c.id, c.russian, c.russian_example, c.english, c.english_example, 
+                       COALESCE(up.is_learned, FALSE) as is_learned,
+                       cat.id, cat.name, cat.color
+                FROM cards c
+                INNER JOIN card_groups cg ON c.id = cg.card_id
+                LEFT JOIN categories cat ON c.category_id = cat.id
+                LEFT JOIN user_progress up ON c.id = up.card_id AND up.user_id = %s
+                WHERE cg.group_id = %s
+                ORDER BY c.created_at DESC
+            """, (user_id, group_id))
+        else:
+            cur.execute("""
+                SELECT c.id, c.russian, c.russian_example, c.english, c.english_example, 
+                       COALESCE(up.is_learned, FALSE) as is_learned,
+                       cat.id, cat.name, cat.color
+                FROM cards c
+                LEFT JOIN categories cat ON c.category_id = cat.id
+                LEFT JOIN user_progress up ON c.id = up.card_id AND up.user_id = %s
+                ORDER BY c.created_at DESC
+            """, (user_id,))
         
         cards = []
         for row in cur.fetchall():
@@ -89,6 +137,50 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         body_data = json.loads(event.get('body', '{}'))
+        
+        if 'name' in body_data and 'color' in body_data and 'russian' not in body_data:
+            name = body_data.get('name', '')
+            description = body_data.get('description', '')
+            color = body_data.get('color', '#3b82f6')
+            
+            cur.execute(
+                "INSERT INTO groups (name, description, color) VALUES (%s, %s, %s) RETURNING id",
+                (name, description, color)
+            )
+            
+            group_id = cur.fetchone()[0]
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'groupId': group_id}),
+                'isBase64Encoded': False
+            }
+        
+        if 'groupId' in body_data and 'cardIds' in body_data:
+            group_id = body_data['groupId']
+            card_ids = body_data['cardIds']
+            
+            for card_id in card_ids:
+                cur.execute(
+                    "INSERT INTO card_groups (card_id, group_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (card_id, group_id)
+                )
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True}),
+                'isBase64Encoded': False
+            }
+        
         russian = body_data.get('russian', '')
         english = body_data.get('english', '')
         russian_example = body_data.get('russianExample', '')
@@ -115,27 +207,39 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     elif method == 'PUT':
         body_data = json.loads(event.get('body', '{}'))
-        card_id = body_data.get('id') or body_data.get('cardId')
         
-        if 'learned' in body_data:
-            cur.execute(
-                """INSERT INTO user_progress (user_id, card_id, is_learned, updated_at) 
-                   VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
-                   ON CONFLICT (user_id, card_id) 
-                   DO UPDATE SET is_learned = %s, updated_at = CURRENT_TIMESTAMP""",
-                (user_id, card_id, body_data['learned'], body_data['learned'])
-            )
-        elif is_admin and ('russian' in body_data and 'english' in body_data):
-            russian = body_data.get('russian', '')
-            english = body_data.get('english', '')
-            russian_example = body_data.get('russianExample', '')
-            english_example = body_data.get('englishExample', '')
-            category_id = body_data.get('categoryId')
+        if is_admin and 'groupId' in body_data and ('name' in body_data or 'color' in body_data):
+            group_id = body_data.get('groupId') or body_data.get('id')
+            name = body_data.get('name', '')
+            description = body_data.get('description', '')
+            color = body_data.get('color', '#3b82f6')
             
             cur.execute(
-                "UPDATE cards SET russian = %s, english = %s, russian_example = %s, english_example = %s, category_id = %s WHERE id = %s",
-                (russian, english, russian_example, english_example, category_id, card_id)
+                "UPDATE groups SET name = %s, description = %s, color = %s WHERE id = %s",
+                (name, description, color, group_id)
             )
+        else:
+            card_id = body_data.get('id') or body_data.get('cardId')
+            
+            if 'learned' in body_data:
+                cur.execute(
+                    """INSERT INTO user_progress (user_id, card_id, is_learned, updated_at) 
+                       VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                       ON CONFLICT (user_id, card_id) 
+                       DO UPDATE SET is_learned = %s, updated_at = CURRENT_TIMESTAMP""",
+                    (user_id, card_id, body_data['learned'], body_data['learned'])
+                )
+            elif is_admin and ('russian' in body_data and 'english' in body_data):
+                russian = body_data.get('russian', '')
+                english = body_data.get('english', '')
+                russian_example = body_data.get('russianExample', '')
+                english_example = body_data.get('englishExample', '')
+                category_id = body_data.get('categoryId')
+                
+                cur.execute(
+                    "UPDATE cards SET russian = %s, english = %s, russian_example = %s, english_example = %s, category_id = %s WHERE id = %s",
+                    (russian, english, russian_example, english_example, category_id, card_id)
+                )
         
         conn.commit()
         cur.close()
@@ -159,14 +263,25 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
         
-        body_data = json.loads(event.get('body', '{}'))
-        card_id = body_data.get('cardId') or body_data.get('id')
+        query_params = event.get('queryStringParameters', {})
+        body_data = json.loads(event.get('body', '{}')) if event.get('body') else {}
         
-        if not card_id:
-            query_params = event.get('queryStringParameters', {})
-            card_id = query_params.get('id')
-        
-        cur.execute("DELETE FROM cards WHERE id = %s", (card_id,))
+        if 'cardId' in query_params and 'groupId' in query_params:
+            cur.execute(
+                "DELETE FROM card_groups WHERE card_id = %s AND group_id = %s",
+                (query_params['cardId'], query_params['groupId'])
+            )
+        elif 'cardId' in body_data and 'groupId' in body_data:
+            cur.execute(
+                "DELETE FROM card_groups WHERE card_id = %s AND group_id = %s",
+                (body_data['cardId'], body_data['groupId'])
+            )
+        elif 'groupId' in query_params or 'groupId' in body_data:
+            group_id = query_params.get('groupId') or body_data.get('groupId')
+            cur.execute("DELETE FROM groups WHERE id = %s", (group_id,))
+        else:
+            card_id = body_data.get('cardId') or body_data.get('id') or query_params.get('id')
+            cur.execute("DELETE FROM cards WHERE id = %s", (card_id,))
         
         conn.commit()
         cur.close()

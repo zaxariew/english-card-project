@@ -45,6 +45,15 @@ type Category = {
   color: string;
 };
 
+type Group = {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  createdAt: string;
+  cardCount: number;
+};
+
 export default function Index() {
   const [user, setUser] = useState<{ id: number; username: string; isAdmin: boolean } | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -76,6 +85,15 @@ export default function Index() {
   });
   
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
+  
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [newGroup, setNewGroup] = useState({
+    name: '',
+    description: '',
+    color: '#3b82f6',
+  });
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [selectedCardsForGroup, setSelectedCardsForGroup] = useState<number[]>([]);
 
   const currentCard = cards[currentCardIndex];
   const learnedCount = cards.filter((c) => c.learned).length;
@@ -91,6 +109,7 @@ export default function Index() {
       }
       loadCategories(userData.id);
       loadCards(userData.id);
+      loadGroups();
     } else {
       setShowAuth(true);
     }
@@ -185,9 +204,13 @@ export default function Index() {
     }
   };
 
-  const loadCards = async (userId: number) => {
+  const loadCards = async (userId: number, groupIdFilter?: number | null) => {
     try {
-      const response = await fetch(API_URLS.cards, {
+      const url = groupIdFilter 
+        ? `${API_URLS.cards}?groupId=${groupIdFilter}`
+        : API_URLS.cards;
+      
+      const response = await fetch(url, {
         headers: { 
           'X-User-Id': userId.toString(),
           'X-Is-Admin': user?.isAdmin ? 'true' : 'false'
@@ -422,6 +445,102 @@ export default function Index() {
     }
   };
 
+  const loadGroups = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`${API_URLS.cards}?resource=groups`, {
+        headers: { 
+          'X-User-Id': user.id.toString(),
+          'X-Is-Admin': user.isAdmin ? 'true' : 'false'
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setGroups(data.groups || []);
+      }
+    } catch (error) {
+      console.error('Failed to load groups');
+    }
+  };
+
+  useEffect(() => {
+    if (user?.isAdmin) {
+      loadGroups();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadCards(user.id, selectedGroupId);
+    }
+  }, [selectedGroupId]);
+
+  const handleAddGroup = async () => {
+    if (!user || !newGroup.name.trim()) return;
+    try {
+      const response = await fetch(API_URLS.cards, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id.toString(),
+          'X-Is-Admin': 'true',
+        },
+        body: JSON.stringify(newGroup),
+      });
+      if (response.ok) {
+        toast.success('Группа создана!');
+        setNewGroup({ name: '', description: '', color: '#3b82f6' });
+        loadGroups();
+      }
+    } catch (error) {
+      toast.error('Ошибка создания группы');
+    }
+  };
+
+  const handleAddCardsToGroup = async (groupId: number) => {
+    if (!user || selectedCardsForGroup.length === 0) return;
+    try {
+      const response = await fetch(API_URLS.cards, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id.toString(),
+          'X-Is-Admin': 'true',
+        },
+        body: JSON.stringify({
+          groupId,
+          cardIds: selectedCardsForGroup,
+        }),
+      });
+      if (response.ok) {
+        toast.success('Карточки добавлены в группу!');
+        setSelectedCardsForGroup([]);
+        loadGroups();
+      }
+    } catch (error) {
+      toast.error('Ошибка добавления карточек');
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: number) => {
+    if (!user || !confirm('Удалить эту группу?')) return;
+    try {
+      const response = await fetch(`${API_URLS.cards}?groupId=${groupId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-User-Id': user.id.toString(),
+          'X-Is-Admin': 'true',
+        },
+      });
+      if (response.ok) {
+        toast.success('Группа удалена');
+        loadGroups();
+      }
+    } catch (error) {
+      toast.error('Ошибка удаления группы');
+    }
+  };
+
   const filteredCards = cards.filter((card) => {
     const matchesSearch =
       card.russian.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -621,6 +740,10 @@ export default function Index() {
                   <Icon name="Layers" size={18} />
                   Категории
                 </TabsTrigger>
+                <TabsTrigger value="groups" className="gap-2 py-3">
+                  <Icon name="UsersRound" size={18} />
+                  Группы
+                </TabsTrigger>
               </>
             ) : (
               <>
@@ -646,6 +769,23 @@ export default function Index() {
 
           {!user?.isAdmin && (
           <TabsContent value="cards" className="space-y-6 animate-scale-in">
+            {groups.length > 0 && (
+              <div className="flex gap-2 items-center mb-4">
+                <Label className="text-sm font-medium">Группа:</Label>
+                <select
+                  value={selectedGroupId || ''}
+                  onChange={(e) => setSelectedGroupId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="px-3 py-2 border rounded-md text-sm"
+                >
+                  <option value="">Все карточки</option>
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name} ({group.cardCount})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-500">
                 Карточка {currentCardIndex + 1} из {cards.length}
@@ -1161,6 +1301,137 @@ export default function Index() {
                   </Card>
                 );
               })}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="groups" className="space-y-6 animate-fade-in">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Icon name="Plus" size={18} />
+                  Создать группу
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Новая группа</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div>
+                    <Label>Название группы</Label>
+                    <Input
+                      value={newGroup.name}
+                      onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                      placeholder="Например: Базовый уровень"
+                    />
+                  </div>
+                  <div>
+                    <Label>Описание (опционально)</Label>
+                    <Input
+                      value={newGroup.description}
+                      onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                      placeholder="Описание группы"
+                    />
+                  </div>
+                  <div>
+                    <Label>Цвет группы</Label>
+                    <Input
+                      type="color"
+                      value={newGroup.color}
+                      onChange={(e) => setNewGroup({ ...newGroup, color: e.target.value })}
+                    />
+                  </div>
+                  <Button onClick={handleAddGroup} className="w-full">
+                    Создать
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {groups.map((group) => (
+                <Card key={group.id} className="overflow-hidden hover:shadow-lg transition-shadow" style={{ borderLeft: `4px solid ${group.color}` }}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-2xl font-bold mb-1" style={{ color: group.color }}>{group.name}</h3>
+                        {group.description && (
+                          <p className="text-sm text-gray-600">{group.description}</p>
+                        )}
+                      </div>
+                      <Badge variant="secondary" className="text-lg px-3 py-1">
+                        {group.cardCount} карт.
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex gap-2 mt-4">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedGroupId(group.id)}
+                            className="flex-1"
+                          >
+                            <Icon name="Plus" size={16} className="mr-1" />
+                            Добавить карточки
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Добавить карточки в группу "{group.name}"</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-2 pt-4">
+                            {cards.map((card) => (
+                              <div
+                                key={card.id}
+                                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                                onClick={() => {
+                                  setSelectedCardsForGroup((prev) =>
+                                    prev.includes(card.id)
+                                      ? prev.filter((id) => id !== card.id)
+                                      : [...prev, card.id]
+                                  );
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCardsForGroup.includes(card.id)}
+                                  onChange={() => {}}
+                                  className="w-4 h-4"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium">{card.russian} — {card.english}</div>
+                                  {card.categoryName && (
+                                    <Badge variant="outline" className="mt-1">{card.categoryName}</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <Button
+                            onClick={() => {
+                              handleAddCardsToGroup(group.id);
+                            }}
+                            disabled={selectedCardsForGroup.length === 0}
+                            className="w-full mt-4"
+                          >
+                            Добавить {selectedCardsForGroup.length > 0 && `(${selectedCardsForGroup.length})`}
+                          </Button>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDeleteGroup(group.id)}
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         </Tabs>
