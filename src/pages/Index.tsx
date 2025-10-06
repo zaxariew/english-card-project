@@ -115,21 +115,22 @@ export default function Index() {
         loadAccounts();
       }
       loadCategories(user.id);
+      loadCards(user.id, null);
       loadGroups();
     }
   }, [user?.id]);
 
   useEffect(() => {
-    if (user) {
+    if (user && selectedGroupId !== null) {
       loadCards(user.id, selectedGroupId);
     }
-  }, [user?.id, selectedGroupId]);
+  }, [selectedGroupId]);
 
   useEffect(() => {
     if (categories.length > 0 && newCard.categoryId === 0) {
       setNewCard((prev) => ({ ...prev, categoryId: categories[0].id }));
     }
-  }, [categories]);
+  }, [categories.length]);
 
   const speak = (text: string, lang: 'ru-RU' | 'en-US') => {
     if ('speechSynthesis' in window) {
@@ -1098,11 +1099,18 @@ export default function Index() {
                 />
               </div>
               <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={selectedCategoryId === null ? 'default' : 'outline'}
+                  onClick={() => setSelectedCategoryId(null)}
+                  size="sm"
+                >
+                  Все
+                </Button>
                 {categories.map((cat) => (
                   <Button
                     key={cat.id}
                     variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategoryId(selectedCategoryId === cat.id ? null : cat.id)}
+                    onClick={() => setSelectedCategoryId(cat.id)}
                     size="sm"
                   >
                     {cat.name}

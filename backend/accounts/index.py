@@ -42,8 +42,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     cur = conn.cursor()
     
     if method == 'GET':
-        cur.execute("SELECT user_id FROM admins")
-        admin_ids = {row[0] for row in cur.fetchall()}
+        cur.execute("SELECT username FROM admins")
+        admin_usernames = {row[0] for row in cur.fetchall()}
         
         cur.execute("""
             SELECT 
@@ -64,7 +64,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         users = []
         for row in all_users:
-            if row[0] in admin_ids:
+            if row[1] in admin_usernames:
                 continue
             
             learned = row[3] or 0
