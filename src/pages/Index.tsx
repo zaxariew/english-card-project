@@ -94,6 +94,10 @@ export default function Index() {
   });
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedCardsForGroup, setSelectedCardsForGroup] = useState<number[]>([]);
+  const [allCards, setAllCards] = useState<WordCard[]>([]);
+  const [cardsSortBy, setCardsSortBy] = useState<'russian' | 'english' | 'category'>('russian');
+  const [addCardsDialogOpen, setAddCardsDialogOpen] = useState(false);
+  const [dialogSearchQuery, setDialogSearchQuery] = useState('');
 
   const currentCard = cards[currentCardIndex];
   const learnedCount = cards.filter((c) => c.learned).length;
@@ -229,6 +233,10 @@ export default function Index() {
       });
       const data = await response.json();
       setCards(data.cards || []);
+      
+      if (!groupIdFilter) {
+        setAllCards(data.cards || []);
+      }
     } catch (error) {
       toast.error('Ошибка загрузки карточек');
     }
@@ -514,6 +522,8 @@ export default function Index() {
       if (response.ok) {
         toast.success('Карточки добавлены в группу!');
         setSelectedCardsForGroup([]);
+        setDialogSearchQuery('');
+        setAddCardsDialogOpen(false);
         loadGroups();
       }
     } catch (error) {
@@ -547,6 +557,25 @@ export default function Index() {
     const matchesCategory = !selectedCategoryId || card.categoryId === selectedCategoryId;
     return matchesSearch && matchesCategory;
   });
+
+  const sortedAllCards = [...allCards]
+    .filter((card) => {
+      const query = dialogSearchQuery.toLowerCase();
+      return (
+        card.russian.toLowerCase().includes(query) ||
+        card.english.toLowerCase().includes(query) ||
+        (card.categoryName || '').toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      if (cardsSortBy === 'russian') {
+        return a.russian.localeCompare(b.russian);
+      } else if (cardsSortBy === 'english') {
+        return a.english.localeCompare(b.english);
+      } else {
+        return (a.categoryName || '').localeCompare(b.categoryName || '');
+      }
+    });
 
   const colorOptions = [
     { name: 'Фиолетовый', value: 'bg-gradient-to-br from-purple-500 to-purple-600' },
@@ -1458,12 +1487,17 @@ export default function Index() {
                     </div>
                     
                     <div className="flex gap-2 mt-4">
-                      <Dialog>
+                      <Dialog open={addCardsDialogOpen && selectedGroupId === group.id} onOpenChange={setAddCardsDialogOpen}>
                         <DialogTrigger asChild>
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => setSelectedGroupId(group.id)}
+                            onClick={() => {
+                              setSelectedGroupId(group.id);
+                              setDialogSearchQuery('');
+                              setSelectedCardsForGroup([]);
+                              setAddCardsDialogOpen(true);
+                            }}
                             className="flex-1"
                           >
                             <Icon name="Plus" size={16} className="mr-1" />
@@ -1474,8 +1508,72 @@ export default function Index() {
                           <DialogHeader>
                             <DialogTitle>Добавить карточки в группу "{group.name}"</DialogTitle>
                           </DialogHeader>
+                          
                           <div className="space-y-2 pt-4">
-                            {cards.map((card) => (
+                            <div className="relative">
+                              <Icon
+                                name="Search"
+                                size={18}
+                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                              />
+                              <Input
+                                placeholder="Поиск карточек..."
+                                value={dialogSearchQuery}
+                                onChange={(e) => setDialogSearchQuery(e.target.value)}
+                                className="pl-10"
+                              />
+                            </div>
+                            <div className="flex gap-2 pb-2">
+                              <Button
+                                variant={cardsSortBy === 'russian' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setCardsSortBy('russian')}
+                              >
+                                По русскому
+                              </Button>
+                              <Button
+                                variant={cardsSortBy === 'english' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setCardsSortBy('english')}
+                              >
+                                По английскому
+                              </Button>
+                              <Button
+                                variant={cardsSortBy === 'category' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setCardsSortBy('category')}
+                              >
+                                По категории
+                              </Button>
+                            </div>
+                            <div className="flex gap-2 items-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (selectedCardsForGroup.length === sortedAllCards.length) {
+                                    setSelectedCardsForGroup([]);
+                                  } else {
+                                    setSelectedCardsForGroup(sortedAllCards.map(c => c.id));
+                                  }
+                                }}
+                                className="flex-1"
+                              >
+                                {selectedCardsForGroup.length === sortedAllCards.length ? 'Снять выбор' : 'Выбрать все'}
+                              </Button>
+                              <span className="text-sm text-gray-500">
+                                Найдено: {sortedAllCards.length}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 pt-2">
+                            {sortedAllCards.length === 0 && (
+                              <div className="text-center py-8 text-gray-500">
+                                <p>Нет доступных карточек</p>
+                              </div>
+                            )}
+                            {sortedAllCards.map((card) => (
                               <div
                                 key={card.id}
                                 className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
