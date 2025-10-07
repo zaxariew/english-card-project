@@ -278,9 +278,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             )
         elif 'groupId' in query_params or 'groupId' in body_data:
             group_id = query_params.get('groupId') or body_data.get('groupId')
+            cur.execute("DELETE FROM card_groups WHERE group_id = %s", (group_id,))
             cur.execute("DELETE FROM groups WHERE id = %s", (group_id,))
         else:
             card_id = body_data.get('cardId') or body_data.get('id') or query_params.get('id')
+            cur.execute("DELETE FROM card_groups WHERE card_id = %s", (card_id,))
+            cur.execute("DELETE FROM user_progress WHERE card_id = %s", (card_id,))
             cur.execute("DELETE FROM cards WHERE id = %s", (card_id,))
         
         conn.commit()
