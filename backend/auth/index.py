@@ -47,7 +47,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'isBase64Encoded': False
         }
     
-    username_escaped = username.replace("'", "''")
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     
     db_url = os.environ.get('DATABASE_URL')
@@ -55,7 +54,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     cur = conn.cursor()
     
     if action == 'register':
-        cur.execute(f"SELECT id FROM users WHERE username = '{username_escaped}'")
+        cur.execute(
+            "SELECT id FROM users WHERE username = %s",
+            (username,)
+        )
         existing = cur.fetchone()
         
         if existing:
@@ -68,7 +70,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
         
-        cur.execute(f"INSERT INTO users (username, password_hash) VALUES ('{username_escaped}', '{password_hash}') RETURNING id")
+        cur.execute(
+            "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
+            (username, password_hash)
+        )
         user_id = cur.fetchone()[0]
         conn.commit()
         
@@ -80,9 +85,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         ]
         
         for cat_name, cat_color in default_categories:
-            cat_name_escaped = cat_name.replace("'", "''")
-            cat_color_escaped = cat_color.replace("'", "''")
-            cur.execute(f"INSERT INTO categories (user_id, name, color) VALUES ({user_id}, '{cat_name_escaped}', '{cat_color_escaped}')")
+            cur.execute(
+                "INSERT INTO categories (user_id, name, color) VALUES (%s, %s, %s)",
+                (user_id, cat_name, cat_color)
+            )
         
         conn.commit()
         cur.close()
@@ -96,15 +102,27 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     
     elif action == 'login':
-        cur.execute(f"SELECT id, username FROM admins WHERE username = '{username_escaped}'")
+        # Проверяем, не админ ли это
+        cur.execute(
+            "SELECT id, username FROM admins WHERE username = %s",
+            (username,)
+        )
         admin = cur.fetchone()
         
         if admin:
-            cur.execute(f"SELECT password_hash FROM admins WHERE id = {admin[0]}")
+            # Для админа с дефолтным паролем 'admin' обновляем хеш
+            cur.execute(
+                "SELECT password_hash FROM admins WHERE id = %s",
+                (admin[0],)
+            )
             stored_hash = cur.fetchone()[0]
             
             if stored_hash == 'admin':
-                cur.execute(f"UPDATE admins SET password_hash = '{password_hash}' WHERE id = {admin[0]}")
+                # Первый вход - обновляем на хеш
+                cur.execute(
+                    "UPDATE admins SET password_hash = %s WHERE id = %s",
+                    (password_hash, admin[0])
+                )
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -133,7 +151,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
         
-        cur.execute(f"SELECT id, username FROM users WHERE username = '{username_escaped}' AND password_hash = '{password_hash}'")
+        # Обычный пользователь
+        cur.execute(
+            "SELECT id, username FROM users WHERE username = %s AND password_hash = %s",
+            (username, password_hash)
+        )
         user = cur.fetchone()
         cur.close()
         conn.close()
