@@ -480,7 +480,6 @@ export default function Index() {
       <EmptyState
         username={user?.username || ''}
         isAdmin={user?.isAdmin || false}
-        categories={categories}
         newCard={newCard}
         onNewCardChange={setNewCard}
         onAddCard={handleAddCard}

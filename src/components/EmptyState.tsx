@@ -5,22 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
 
-type Category = {
-  id: number;
-  name: string;
-  color: string;
-};
+
 
 type EmptyStateProps = {
   username: string;
   isAdmin: boolean;
-  categories: Category[];
   newCard: {
     russian: string;
     russianExample: string;
     english: string;
     englishExample: string;
-    categoryId: number;
   };
   onNewCardChange: (card: any) => void;
   onAddCard: () => void;
@@ -30,7 +24,6 @@ type EmptyStateProps = {
 export default function EmptyState({
   username,
   isAdmin,
-  categories,
   newCard,
   onNewCardChange,
   onAddCard,
@@ -102,28 +95,7 @@ export default function EmptyState({
                         placeholder="I have a cat"
                       />
                     </div>
-                    <div>
-                      <Label>Категория (необязательно)</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <Button
-                          variant={!newCard.categoryId || newCard.categoryId === 0 ? 'default' : 'outline'}
-                          onClick={() => onNewCardChange({ ...newCard, categoryId: 0 })}
-                          className="w-full"
-                        >
-                          Без категории
-                        </Button>
-                        {categories.map((cat) => (
-                          <Button
-                            key={cat.id}
-                            variant={newCard.categoryId === cat.id ? 'default' : 'outline'}
-                            onClick={() => onNewCardChange({ ...newCard, categoryId: cat.id })}
-                            className="w-full"
-                          >
-                            {cat.name}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+
                     <Button onClick={onAddCard} className="w-full">
                       Добавить
                     </Button>
