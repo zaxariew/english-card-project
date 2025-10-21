@@ -118,23 +118,23 @@ export default function Index() {
       if (user.isAdmin) {
         loadAccounts();
       }
-      loadCategories(user.id);
-      loadCards(user.id, null);
+      loadCategories(user.id, user.isAdmin);
+      loadCards(user.id, null, user.isAdmin);
       loadGroups();
     }
-  }, [user?.id]);
+  }, [user?.id, user?.isAdmin]);
 
   useEffect(() => {
     if (user && selectedGroupId !== null) {
-      loadCards(user.id, selectedGroupId);
+      loadCards(user.id, selectedGroupId, user.isAdmin);
     }
-  }, [selectedGroupId]);
+  }, [selectedGroupId, user?.id, user?.isAdmin]);
 
   useEffect(() => {
     if (categories.length > 0 && newCard.categoryId === 0) {
       setNewCard((prev) => ({ ...prev, categoryId: categories[0].id }));
     }
-  }, [categories.length]);
+  }, [categories.length, newCard.categoryId]);
 
   const speak = (text: string, lang: 'ru-RU' | 'en-US') => {
     if ('speechSynthesis' in window) {
@@ -153,7 +153,7 @@ export default function Index() {
     } else if (currentCard && isFlipped) {
       speak(currentCard.english, 'en-US');
     }
-  }, [currentCardIndex, isFlipped]);
+  }, [currentCardIndex, isFlipped, currentCard?.russian, currentCard?.english]);
 
   const playSound = (text: string, lang: 'ru-RU' | 'en-US') => {
     speak(text, lang);
@@ -182,8 +182,8 @@ export default function Index() {
         if (userData.isAdmin) {
           loadAccounts();
         }
-        loadCategories(data.userId);
-        loadCards(data.userId);
+        loadCategories(data.userId, userData.isAdmin);
+        loadCards(data.userId, null, userData.isAdmin);
       } else {
         toast.error(data.error || 'Ошибка авторизации');
       }
@@ -201,12 +201,12 @@ export default function Index() {
     toast.success('Выход выполнен');
   };
 
-  const loadCategories = async (userId: number) => {
+  const loadCategories = async (userId: number, isAdmin: boolean = false) => {
     try {
       const response = await fetch(API_URLS.categories, {
         headers: { 
           'X-User-Id': userId.toString(),
-          'X-Is-Admin': user?.isAdmin ? 'true' : 'false'
+          'X-Is-Admin': isAdmin ? 'true' : 'false'
         },
       });
       const data = await response.json();
@@ -219,7 +219,7 @@ export default function Index() {
     }
   };
 
-  const loadCards = async (userId: number, groupIdFilter?: number | null) => {
+  const loadCards = async (userId: number, groupIdFilter?: number | null, isAdmin: boolean = false) => {
     try {
       const url = groupIdFilter 
         ? `${API_URLS.cards}?groupId=${groupIdFilter}`
@@ -228,7 +228,7 @@ export default function Index() {
       const response = await fetch(url, {
         headers: { 
           'X-User-Id': userId.toString(),
-          'X-Is-Admin': user?.isAdmin ? 'true' : 'false'
+          'X-Is-Admin': isAdmin ? 'true' : 'false'
         },
       });
       const data = await response.json();
@@ -279,7 +279,7 @@ export default function Index() {
 
       if (response.ok) {
         toast.success('Категория добавлена!');
-        loadCategories(user.id);
+        loadCategories(user.id, user.isAdmin);
         setNewCategory({ name: '', color: 'bg-gradient-to-br from-gray-500 to-gray-600' });
       } else {
         toast.error(data.error || 'Ошибка добавления категории');
@@ -345,7 +345,7 @@ export default function Index() {
 
       if (response.ok) {
         toast.success('Карточка добавлена!');
-        loadCards(user.id);
+        loadCards(user.id, null, user.isAdmin);
         setNewCard({
           russian: '',
           russianExample: '',
@@ -396,7 +396,7 @@ export default function Index() {
         toast.success('Карточка обновлена!');
         setEditDialogOpen(false);
         setEditingCard(null);
-        loadCards(user.id);
+        loadCards(user.id, null, user.isAdmin);
       } else {
         toast.error('Ошибка при обновлении');
       }
@@ -421,7 +421,7 @@ export default function Index() {
 
       if (response.ok) {
         toast.success('Карточка удалена');
-        loadCards(user.id);
+        loadCards(user.id, null, user.isAdmin);
         if (currentCardIndex >= cards.length - 1) {
           setCurrentCardIndex(Math.max(0, cards.length - 2));
         }
