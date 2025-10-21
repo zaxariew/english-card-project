@@ -37,6 +37,7 @@ export default function Index() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [editingCard, setEditingCard] = useState<WordCard | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [exerciseType, setExerciseType] = useState<'cards' | 'listening' | 'fillgaps' | 'test'>('cards');
 
   const [newCategory, setNewCategory] = useState({
     name: '',
@@ -547,7 +548,7 @@ export default function Index() {
           </Button>
         </header>
 
-        <Tabs defaultValue={user?.isAdmin ? "dictionary" : "cards"} className="w-full">
+        <Tabs defaultValue={user?.isAdmin ? "dictionary" : "exercises"} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-8 h-auto">
             {user?.isAdmin ? (
               <>
@@ -570,9 +571,9 @@ export default function Index() {
               </>
             ) : (
               <>
-                <TabsTrigger value="cards" className="gap-2 py-3">
-                  <Icon name="CreditCard" size={18} />
-                  Карточки
+                <TabsTrigger value="exercises" className="gap-2 py-3">
+                  <Icon name="Target" size={18} />
+                  Задания
                 </TabsTrigger>
                 <TabsTrigger value="dictionary" className="gap-2 py-3">
                   <Icon name="Book" size={18} />
@@ -591,28 +592,91 @@ export default function Index() {
           </TabsList>
 
           {!user?.isAdmin && (
-            <TabsContent value="cards">
-              <CardViewer
-                currentCard={currentCard}
-                currentCardIndex={currentCardIndex}
-                totalCards={cards.length}
-                isFlipped={isFlipped}
-                isAdmin={user?.isAdmin || false}
-                groups={groups}
-                selectedGroupId={selectedGroupId}
-                categories={categories}
-                newCard={newCard}
-                isTranslating={isTranslating}
-                onFlip={handleFlip}
-                onNext={handleNext}
-                onPrevious={handlePrevious}
-                onMarkLearned={handleMarkLearned}
-                onPlaySound={playSound}
-                onGroupChange={setSelectedGroupId}
-                onNewCardChange={setNewCard}
-                onAddCard={handleAddCard}
-                onTranslate={handleTranslate}
-              />
+            <TabsContent value="exercises">
+              <div className="mb-6">
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    variant={exerciseType === 'cards' ? 'default' : 'outline'}
+                    onClick={() => setExerciseType('cards')}
+                    className="gap-2"
+                  >
+                    <Icon name="CreditCard" size={18} />
+                    Карточки
+                  </Button>
+                  <Button
+                    variant={exerciseType === 'listening' ? 'default' : 'outline'}
+                    onClick={() => setExerciseType('listening')}
+                    className="gap-2"
+                  >
+                    <Icon name="Headphones" size={18} />
+                    Аудирование
+                  </Button>
+                  <Button
+                    variant={exerciseType === 'fillgaps' ? 'default' : 'outline'}
+                    onClick={() => setExerciseType('fillgaps')}
+                    className="gap-2"
+                  >
+                    <Icon name="PenLine" size={18} />
+                    Пропуски
+                  </Button>
+                  <Button
+                    variant={exerciseType === 'test' ? 'default' : 'outline'}
+                    onClick={() => setExerciseType('test')}
+                    className="gap-2"
+                  >
+                    <Icon name="CheckCircle" size={18} />
+                    Тесты
+                  </Button>
+                </div>
+              </div>
+
+              {exerciseType === 'cards' && (
+                <CardViewer
+                  currentCard={currentCard}
+                  currentCardIndex={currentCardIndex}
+                  totalCards={cards.length}
+                  isFlipped={isFlipped}
+                  isAdmin={user?.isAdmin || false}
+                  groups={groups}
+                  selectedGroupId={selectedGroupId}
+                  categories={categories}
+                  newCard={newCard}
+                  isTranslating={isTranslating}
+                  onFlip={handleFlip}
+                  onNext={handleNext}
+                  onPrevious={handlePrevious}
+                  onMarkLearned={handleMarkLearned}
+                  onPlaySound={playSound}
+                  onGroupChange={setSelectedGroupId}
+                  onNewCardChange={setNewCard}
+                  onAddCard={handleAddCard}
+                  onTranslate={handleTranslate}
+                />
+              )}
+
+              {exerciseType === 'listening' && (
+                <div className="text-center p-12 border-2 border-dashed rounded-lg">
+                  <Icon name="Headphones" size={48} className="mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">Аудирование</h3>
+                  <p className="text-muted-foreground">Скоро здесь появятся упражнения на аудирование</p>
+                </div>
+              )}
+
+              {exerciseType === 'fillgaps' && (
+                <div className="text-center p-12 border-2 border-dashed rounded-lg">
+                  <Icon name="PenLine" size={48} className="mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">Заполнение пропусков</h3>
+                  <p className="text-muted-foreground">Скоро здесь появятся упражнения с пропусками</p>
+                </div>
+              )}
+
+              {exerciseType === 'test' && (
+                <div className="text-center p-12 border-2 border-dashed rounded-lg">
+                  <Icon name="CheckCircle" size={48} className="mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">Тесты</h3>
+                  <p className="text-muted-foreground">Скоро здесь появятся тестовые задания</p>
+                </div>
+              )}
             </TabsContent>
           )}
 
@@ -630,7 +694,8 @@ export default function Index() {
               onCardClick={(cardId) => {
                 const index = cards.findIndex((c) => c.id === cardId);
                 setCurrentCardIndex(index);
-                const cardTab = document.querySelector('[value="cards"]') as HTMLElement;
+                setExerciseType('cards');
+                const cardTab = document.querySelector('[value="exercises"]') as HTMLElement;
                 cardTab?.click();
               }}
               onEditCard={(card) => {
