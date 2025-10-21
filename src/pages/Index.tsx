@@ -741,36 +741,48 @@ export default function Index() {
 
               <div className="bg-card rounded-lg border p-6">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Icon name="TrendingUp" size={24} />
-                  Прогресс по категориям
+                  <Icon name="UsersRound" size={24} />
+                  Изученные группы
                 </h3>
-                <div className="space-y-4">
-                  {categories.map((category) => {
-                    const categoryCards = cards.filter(c => c.categoryId === category.id);
-                    const learnedCards = categoryCards.filter(c => c.learned);
-                    const progress = categoryCards.length > 0 ? Math.round((learnedCards.length / categoryCards.length) * 100) : 0;
+                {groups.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">Нет доступных групп</p>
+                ) : (
+                  <div className="space-y-4">
+                    {groups.map((group) => {
+                      const groupCards = cards.filter(c => c.groupId === group.id);
+                      const learnedCards = groupCards.filter(c => c.learned);
+                      const progress = groupCards.length > 0 ? Math.round((learnedCards.length / groupCards.length) * 100) : 0;
 
-                    return (
-                      <div key={category.id} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded ${category.color}`} />
-                            <span className="font-medium">{category.name}</span>
+                      return (
+                        <div key={group.id} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-4 h-4 rounded" 
+                                style={{ backgroundColor: group.color }}
+                              />
+                              <div>
+                                <span className="font-medium">{group.name}</span>
+                                {group.description && (
+                                  <p className="text-xs text-muted-foreground">{group.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {learnedCards.length} / {groupCards.length}
+                            </span>
                           </div>
-                          <span className="text-sm text-muted-foreground">
-                            {learnedCards.length} / {categoryCards.length}
-                          </span>
+                          <div className="w-full bg-muted rounded-full h-2.5">
+                            <div
+                              className="bg-primary h-2.5 rounded-full transition-all"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-2.5">
-                          <div
-                            className="bg-primary h-2.5 rounded-full transition-all"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="bg-card rounded-lg border p-6">
