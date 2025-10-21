@@ -2,12 +2,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { WordCard, Category } from './types';
+import { WordCard } from './types';
 
 type EditCardDialogProps = {
   open: boolean;
   editingCard: WordCard | null;
-  categories: Category[];
   onOpenChange: (open: boolean) => void;
   onEditingCardChange: (card: WordCard) => void;
   onSave: () => void;
@@ -16,7 +15,6 @@ type EditCardDialogProps = {
 export default function EditCardDialog({
   open,
   editingCard,
-  categories,
   onOpenChange,
   onEditingCardChange,
   onSave,
@@ -57,21 +55,7 @@ export default function EditCardDialog({
                 onChange={(e) => onEditingCardChange({ ...editingCard, englishExample: e.target.value })}
               />
             </div>
-            <div>
-              <Label>Категория</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {categories.map((cat) => (
-                  <Button
-                    key={cat.id}
-                    variant={editingCard.categoryId === cat.id ? 'default' : 'outline'}
-                    onClick={() => onEditingCardChange({ ...editingCard, categoryId: cat.id })}
-                    className="w-full"
-                  >
-                    {cat.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
+
             <div>
               <Label>Курс</Label>
               <div className="flex gap-2 mt-2">

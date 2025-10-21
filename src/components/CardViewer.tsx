@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
-import { WordCard, Category, Group } from './types';
+import { WordCard, Group } from './types';
 
 type CardViewerProps = {
   currentCard: WordCard;
@@ -15,13 +15,11 @@ type CardViewerProps = {
   isAdmin: boolean;
   groups: Group[];
   selectedGroupId: number | null;
-  categories: Category[];
   newCard: {
     russian: string;
     russianExample: string;
     english: string;
     englishExample: string;
-    categoryId: number;
   };
   isTranslating: boolean;
   onFlip: () => void;
@@ -43,7 +41,6 @@ export default function CardViewer({
   isAdmin,
   groups,
   selectedGroupId,
-  categories,
   newCard,
   isTranslating,
   onFlip,
@@ -136,28 +133,7 @@ export default function CardViewer({
                     placeholder="I have a cat"
                   />
                 </div>
-                <div>
-                  <Label>Категория (необязательно)</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <Button
-                      variant={!newCard.categoryId || newCard.categoryId === 0 ? 'default' : 'outline'}
-                      onClick={() => onNewCardChange({ ...newCard, categoryId: 0 })}
-                      className="w-full"
-                    >
-                      Без категории
-                    </Button>
-                    {categories.map((cat) => (
-                      <Button
-                        key={cat.id}
-                        variant={newCard.categoryId === cat.id ? 'default' : 'outline'}
-                        onClick={() => onNewCardChange({ ...newCard, categoryId: cat.id })}
-                        className="w-full"
-                      >
-                        {cat.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+
                 <Button onClick={onAddCard} className="w-full">
                   Добавить
                 </Button>
@@ -180,13 +156,10 @@ export default function CardViewer({
           }}
         >
           <Card
-            className={`absolute w-full h-full ${currentCard.categoryColor || 'bg-gradient-to-br from-purple-500 to-purple-600'} text-white shadow-2xl backface-hidden hover:shadow-3xl transition-shadow`}
+            className="absolute w-full h-full bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-2xl backface-hidden hover:shadow-3xl transition-shadow"
             style={{ backfaceVisibility: 'hidden' }}
           >
             <CardContent className="flex flex-col items-center justify-center h-full p-8">
-              <Badge className="mb-4 bg-white/20 backdrop-blur-sm">
-                {currentCard.categoryName || 'Без категории'}
-              </Badge>
               <div className="flex items-center gap-3 mb-4">
                 <h2 className="text-6xl font-bold">{currentCard.russian}</h2>
                 <Button

@@ -5,24 +5,20 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
-import { WordCard, Category } from './types';
+import { WordCard } from './types';
 
 type DictionaryProps = {
   cards: WordCard[];
-  categories: Category[];
   searchQuery: string;
-  selectedCategoryId: number | null;
   isAdmin: boolean;
   newCard: {
     russian: string;
     russianExample: string;
     english: string;
     englishExample: string;
-    categoryId: number;
   };
   isTranslating: boolean;
   onSearchChange: (query: string) => void;
-  onCategoryFilter: (categoryId: number | null) => void;
   onCardClick: (cardId: number) => void;
   onEditCard: (card: WordCard) => void;
   onDeleteCard: (cardId: number) => void;
@@ -33,14 +29,11 @@ type DictionaryProps = {
 
 export default function Dictionary({
   cards,
-  categories,
   searchQuery,
-  selectedCategoryId,
   isAdmin,
   newCard,
   isTranslating,
   onSearchChange,
-  onCategoryFilter,
   onCardClick,
   onEditCard,
   onDeleteCard,
@@ -52,8 +45,7 @@ export default function Dictionary({
     const matchesSearch =
       card.russian.toLowerCase().includes(searchQuery.toLowerCase()) ||
       card.english.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategoryId || card.categoryId === selectedCategoryId;
-    return matchesSearch && matchesCategory;
+    return matchesSearch;
   });
 
   return (
@@ -115,28 +107,7 @@ export default function Dictionary({
                   placeholder="I have a cat"
                 />
               </div>
-              <div>
-                <Label>Категория (необязательно)</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <Button
-                    variant={!newCard.categoryId || newCard.categoryId === 0 ? 'default' : 'outline'}
-                    onClick={() => onNewCardChange({ ...newCard, categoryId: 0 })}
-                    className="w-full"
-                  >
-                    Без категории
-                  </Button>
-                  {categories.map((cat) => (
-                    <Button
-                      key={cat.id}
-                      variant={newCard.categoryId === cat.id ? 'default' : 'outline'}
-                      onClick={() => onNewCardChange({ ...newCard, categoryId: cat.id })}
-                      className="w-full"
-                    >
-                      {cat.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+
               {isAdmin && (
                 <div>
                   <Label>Курс</Label>
@@ -176,25 +147,6 @@ export default function Dictionary({
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant={selectedCategoryId === null ? 'default' : 'outline'}
-            onClick={() => onCategoryFilter(null)}
-            size="sm"
-          >
-            Все
-          </Button>
-          {categories.map((cat) => (
-            <Button
-              key={cat.id}
-              variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
-              onClick={() => onCategoryFilter(cat.id)}
-              size="sm"
-            >
-              {cat.name}
-            </Button>
-          ))}
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -207,7 +159,6 @@ export default function Dictionary({
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex gap-2 items-center">
-                  <Badge className={card.categoryColor || 'bg-gray-500'}>{card.categoryName || 'Без категории'}</Badge>
                   {card.course && (
                     <Badge variant="outline" className="text-xs">
                       {card.course} курс

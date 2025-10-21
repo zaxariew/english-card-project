@@ -3,13 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
-import { API_URLS, WordCard, Category, Group, UserAccount } from '@/components/types';
+import { API_URLS, WordCard, Group, UserAccount } from '@/components/types';
 import AuthScreen from '@/components/AuthScreen';
 import EmptyState from '@/components/EmptyState';
 import CardViewer from '@/components/CardViewer';
 import Dictionary from '@/components/Dictionary';
 import ProgressTab from '@/components/ProgressTab';
-import CategoriesTab from '@/components/CategoriesTab';
 import GroupsTab from '@/components/GroupsTab';
 import EditCardDialog from '@/components/EditCardDialog';
 
@@ -19,19 +18,16 @@ export default function Index() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
 
-  const [categories, setCategories] = useState<Category[]>([]);
   const [cards, setCards] = useState<WordCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   const [newCard, setNewCard] = useState({
     russian: '',
     russianExample: '',
     english: '',
     englishExample: '',
-    categoryId: 0,
     course: 1,
   });
 
@@ -44,10 +40,7 @@ export default function Index() {
     return saved ? parseInt(saved) : 1;
   });
 
-  const [newCategory, setNewCategory] = useState({
-    name: '',
-    color: 'bg-gradient-to-br from-gray-500 to-gray-600',
-  });
+
 
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
 
@@ -84,7 +77,6 @@ export default function Index() {
       if (user.isAdmin) {
         loadAccounts();
       }
-      loadCategories(user.id);
       loadCards(user.id, null);
       loadGroups();
     }
@@ -102,11 +94,7 @@ export default function Index() {
     }
   }, [selectedCourse, filteredCards.length, currentCardIndex, user?.isAdmin]);
 
-  useEffect(() => {
-    if (categories.length > 0 && newCard.categoryId === 0) {
-      setNewCard((prev) => ({ ...prev, categoryId: categories[0].id }));
-    }
-  }, [categories.length]);
+
 
   const speak = (text: string, lang: 'ru-RU' | 'en-US') => {
     if ('speechSynthesis' in window) {
@@ -173,23 +161,7 @@ export default function Index() {
     toast.success('Выход выполнен');
   };
 
-  const loadCategories = async (userId: number, isAdmin?: boolean) => {
-    try {
-      const response = await fetch(API_URLS.categories, {
-        headers: {
-          'X-User-Id': userId.toString(),
-          'X-Is-Admin': (isAdmin ?? user?.isAdmin) ? 'true' : 'false'
-        },
-      });
-      const data = await response.json();
-      setCategories(data.categories || []);
-      if (data.categories?.length > 0) {
-        setNewCard((prev) => ({ ...prev, categoryId: data.categories[0].id }));
-      }
-    } catch (error) {
-      toast.error('Ошибка загрузки категорий');
-    }
-  };
+
 
   const loadCards = async (userId: number, groupIdFilter?: number | null, isAdmin?: boolean) => {
     try {
@@ -230,36 +202,7 @@ export default function Index() {
     }
   };
 
-  const handleAddCategory = async () => {
-    if (!user || !newCategory.name) {
-      toast.error('Введите название категории');
-      return;
-    }
 
-    try {
-      const response = await fetch(API_URLS.categories, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-Id': user.id.toString(),
-          'X-Is-Admin': user.isAdmin ? 'true' : 'false',
-        },
-        body: JSON.stringify(newCategory),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Категория добавлена!');
-        loadCategories(user.id);
-        setNewCategory({ name: '', color: 'bg-gradient-to-br from-gray-500 to-gray-600' });
-      } else {
-        toast.error(data.error || 'Ошибка добавления категории');
-      }
-    } catch (error) {
-      toast.error('Ошибка соединения');
-    }
-  };
 
   const handleTranslate = async () => {
     if (!newCard.russian.trim()) {
@@ -652,7 +595,6 @@ export default function Index() {
                   isAdmin={user?.isAdmin || false}
                   groups={filteredGroups}
                   selectedGroupId={selectedGroupId}
-                  categories={categories}
                   newCard={newCard}
                   isTranslating={isTranslating}
                   onFlip={handleFlip}
@@ -696,14 +638,11 @@ export default function Index() {
           <TabsContent value="dictionary">
             <Dictionary
               cards={cards}
-              categories={categories}
               searchQuery={searchQuery}
-              selectedCategoryId={selectedCategoryId}
               isAdmin={user?.isAdmin || false}
               newCard={newCard}
               isTranslating={isTranslating}
               onSearchChange={setSearchQuery}
-              onCategoryFilter={setSelectedCategoryId}
               onCardClick={(cardId) => {
                 const index = cards.findIndex((c) => c.id === cardId);
                 setCurrentCardIndex(index);
@@ -878,7 +817,6 @@ export default function Index() {
       <EditCardDialog
         open={editDialogOpen}
         editingCard={editingCard}
-        categories={categories}
         onOpenChange={setEditDialogOpen}
         onEditingCardChange={setEditingCard}
         onSave={handleEditCard}
