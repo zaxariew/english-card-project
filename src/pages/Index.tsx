@@ -258,13 +258,13 @@ export default function Index() {
 
       if (response.ok) {
         toast.success('Карточка добавлена!');
-        loadCards(user.id);
+        loadCards(user.id, selectedGroupId);
         setNewCard({
           russian: '',
           russianExample: '',
           english: '',
           englishExample: '',
-          categoryId: categories[0]?.id || 0,
+          course: 1,
         });
       } else {
         toast.error('Ошибка добавления карточки');
