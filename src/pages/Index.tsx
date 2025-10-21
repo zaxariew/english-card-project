@@ -139,8 +139,8 @@ export default function Index() {
         if (userData.isAdmin) {
           loadAccounts();
         }
-        loadCategories(data.userId, userData.isAdmin);
-        loadCards(data.userId, null, userData.isAdmin);
+        loadCategories(data.userId);
+        loadCards(data.userId);
       } else {
         toast.error(data.error || 'Ошибка авторизации');
       }
@@ -158,12 +158,12 @@ export default function Index() {
     toast.success('Выход выполнен');
   };
 
-  const loadCategories = async (userId: number, isAdmin?: boolean) => {
+  const loadCategories = async (userId: number) => {
     try {
       const response = await fetch(API_URLS.categories, {
         headers: {
           'X-User-Id': userId.toString(),
-          'X-Is-Admin': (isAdmin ?? user?.isAdmin) ? 'true' : 'false'
+          'X-Is-Admin': user?.isAdmin ? 'true' : 'false'
         },
       });
       const data = await response.json();
@@ -176,7 +176,7 @@ export default function Index() {
     }
   };
 
-  const loadCards = async (userId: number, groupIdFilter?: number | null, isAdmin?: boolean) => {
+  const loadCards = async (userId: number, groupIdFilter?: number | null) => {
     try {
       const url = groupIdFilter
         ? `${API_URLS.cards}?groupId=${groupIdFilter}`
@@ -185,7 +185,7 @@ export default function Index() {
       const response = await fetch(url, {
         headers: {
           'X-User-Id': userId.toString(),
-          'X-Is-Admin': (isAdmin ?? user?.isAdmin) ? 'true' : 'false'
+          'X-Is-Admin': user?.isAdmin ? 'true' : 'false'
         },
       });
       const data = await response.json();
