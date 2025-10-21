@@ -549,24 +549,20 @@ export default function Index() {
         </header>
 
         <Tabs defaultValue={user?.isAdmin ? "dictionary" : "exercises"} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8 h-auto">
+          <TabsList className="grid w-full grid-cols-3 mb-8 h-auto">
             {user?.isAdmin ? (
               <>
                 <TabsTrigger value="dictionary" className="gap-2 py-3">
                   <Icon name="Book" size={18} />
                   Библиотека
                 </TabsTrigger>
-                <TabsTrigger value="progress" className="gap-2 py-3">
-                  <Icon name="Users" size={18} />
-                  Аккаунты
-                </TabsTrigger>
-                <TabsTrigger value="categories" className="gap-2 py-3">
-                  <Icon name="Layers" size={18} />
-                  Категории
-                </TabsTrigger>
                 <TabsTrigger value="groups" className="gap-2 py-3">
                   <Icon name="UsersRound" size={18} />
                   Группы
+                </TabsTrigger>
+                <TabsTrigger value="profile" className="gap-2 py-3">
+                  <Icon name="User" size={18} />
+                  Профиль
                 </TabsTrigger>
               </>
             ) : (
@@ -579,13 +575,9 @@ export default function Index() {
                   <Icon name="Book" size={18} />
                   Словарь
                 </TabsTrigger>
-                <TabsTrigger value="progress" className="gap-2 py-3">
-                  <Icon name="TrendingUp" size={18} />
-                  Прогресс
-                </TabsTrigger>
-                <TabsTrigger value="categories" className="gap-2 py-3">
-                  <Icon name="Layers" size={18} />
-                  Категории
+                <TabsTrigger value="profile" className="gap-2 py-3">
+                  <Icon name="User" size={18} />
+                  Профиль
                 </TabsTrigger>
               </>
             )}
@@ -709,29 +701,99 @@ export default function Index() {
             />
           </TabsContent>
 
-          <TabsContent value="progress">
-            <ProgressTab
-              isAdmin={user?.isAdmin || false}
-              accounts={accounts}
-              cards={cards}
-              categories={categories}
-            />
-          </TabsContent>
+          <TabsContent value="profile">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-card rounded-lg border p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Icon name="User" size={40} className="text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">{user?.username}</h2>
+                    <p className="text-muted-foreground">{user?.isAdmin ? 'Администратор' : 'Ученик'}</p>
+                  </div>
+                </div>
 
-          <TabsContent value="categories">
-            <CategoriesTab
-              categories={categories}
-              cards={cards}
-              isAdmin={user?.isAdmin || false}
-              newCategory={newCategory}
-              onNewCategoryChange={setNewCategory}
-              onAddCategory={handleAddCategory}
-              onCategoryClick={(categoryId) => {
-                setSelectedCategoryId(categoryId);
-                const dictTab = document.querySelector('[value="dictionary"]') as HTMLElement;
-                dictTab?.click();
-              }}
-            />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icon name="BookOpen" size={20} className="text-primary" />
+                      <h3 className="font-semibold">Всего слов</h3>
+                    </div>
+                    <p className="text-3xl font-bold">{cards.length}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icon name="CheckCircle" size={20} className="text-green-500" />
+                      <h3 className="font-semibold">Изучено</h3>
+                    </div>
+                    <p className="text-3xl font-bold">{cards.filter(c => c.learned).length}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icon name="Target" size={20} className="text-orange-500" />
+                      <h3 className="font-semibold">Осталось</h3>
+                    </div>
+                    <p className="text-3xl font-bold">{cards.filter(c => !c.learned).length}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-card rounded-lg border p-6">
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Icon name="TrendingUp" size={24} />
+                  Прогресс по категориям
+                </h3>
+                <div className="space-y-4">
+                  {categories.map((category) => {
+                    const categoryCards = cards.filter(c => c.categoryId === category.id);
+                    const learnedCards = categoryCards.filter(c => c.learned);
+                    const progress = categoryCards.length > 0 ? Math.round((learnedCards.length / categoryCards.length) * 100) : 0;
+
+                    return (
+                      <div key={category.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded ${category.color}`} />
+                            <span className="font-medium">{category.name}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {learnedCards.length} / {categoryCards.length}
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2.5">
+                          <div
+                            className="bg-primary h-2.5 rounded-full transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-card rounded-lg border p-6">
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Icon name="Settings" size={24} />
+                  Настройки
+                </h3>
+                <div className="space-y-4">
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setUser(null);
+                      setShowAuth(true);
+                      toast.success('Вы вышли из аккаунта');
+                    }}
+                    className="w-full gap-2"
+                  >
+                    <Icon name="LogOut" size={18} />
+                    Выйти из аккаунта
+                  </Button>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="groups">
