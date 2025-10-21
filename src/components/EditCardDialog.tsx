@@ -72,6 +72,21 @@ export default function EditCardDialog({
                 ))}
               </div>
             </div>
+            <div>
+              <Label>Курс</Label>
+              <div className="flex gap-2 mt-2">
+                {[1, 2, 3, 4, 5].map((course) => (
+                  <Button
+                    key={course}
+                    variant={editingCard.course === course ? 'default' : 'outline'}
+                    onClick={() => onEditingCardChange({ ...editingCard, course })}
+                    className="flex-1"
+                  >
+                    {course}
+                  </Button>
+                ))}
+              </div>
+            </div>
             <div className="flex gap-2">
               <Button onClick={onSave} className="flex-1">Сохранить</Button>
               <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Отмена</Button>

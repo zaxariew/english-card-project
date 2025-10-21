@@ -32,6 +32,7 @@ export default function Index() {
     english: '',
     englishExample: '',
     categoryId: 0,
+    course: 1,
   });
 
   const [isTranslating, setIsTranslating] = useState(false);
@@ -63,7 +64,8 @@ export default function Index() {
   const [addCardsDialogOpen, setAddCardsDialogOpen] = useState(false);
   const [dialogSearchQuery, setDialogSearchQuery] = useState('');
 
-  const currentCard = cards[currentCardIndex];
+  const filteredCards = user?.isAdmin ? cards : cards.filter(card => (card.course || 1) === selectedCourse);
+  const currentCard = filteredCards[currentCardIndex];
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -91,6 +93,12 @@ export default function Index() {
       loadCards(user.id, selectedGroupId);
     }
   }, [selectedGroupId]);
+
+  useEffect(() => {
+    if (!user?.isAdmin && filteredCards.length > 0 && currentCardIndex >= filteredCards.length) {
+      setCurrentCardIndex(0);
+    }
+  }, [selectedCourse, filteredCards.length, currentCardIndex, user?.isAdmin]);
 
   useEffect(() => {
     if (categories.length > 0 && newCard.categoryId === 0) {
@@ -589,7 +597,14 @@ export default function Index() {
 
           {!user?.isAdmin && (
             <TabsContent value="exercises">
-              <div className="mb-6">
+              <div className="mb-6 space-y-4">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-2">Текущий курс</p>
+                  <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-lg">
+                    <Icon name="GraduationCap" size={20} className="text-primary" />
+                    <span className="font-semibold text-lg">{selectedCourse} курс</span>
+                  </div>
+                </div>
                 <div className="flex gap-2 justify-center">
                   <Button
                     variant={exerciseType === 'cards' ? 'default' : 'outline'}
@@ -630,7 +645,7 @@ export default function Index() {
                 <CardViewer
                   currentCard={currentCard}
                   currentCardIndex={currentCardIndex}
-                  totalCards={cards.length}
+                  totalCards={filteredCards.length}
                   isFlipped={isFlipped}
                   isAdmin={user?.isAdmin || false}
                   groups={groups}
@@ -724,21 +739,21 @@ export default function Index() {
                       <Icon name="BookOpen" size={20} className="text-primary" />
                       <h3 className="font-semibold">Всего слов</h3>
                     </div>
-                    <p className="text-3xl font-bold">{cards.length}</p>
+                    <p className="text-3xl font-bold">{filteredCards.length}</p>
                   </div>
                   <div className="bg-muted/50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Icon name="CheckCircle" size={20} className="text-green-500" />
                       <h3 className="font-semibold">Изучено</h3>
                     </div>
-                    <p className="text-3xl font-bold">{cards.filter(c => c.learned).length}</p>
+                    <p className="text-3xl font-bold">{filteredCards.filter(c => c.learned).length}</p>
                   </div>
                   <div className="bg-muted/50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Icon name="Target" size={20} className="text-orange-500" />
                       <h3 className="font-semibold">Осталось</h3>
                     </div>
-                    <p className="text-3xl font-bold">{cards.filter(c => !c.learned).length}</p>
+                    <p className="text-3xl font-bold">{filteredCards.filter(c => !c.learned).length}</p>
                   </div>
                 </div>
               </div>

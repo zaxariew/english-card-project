@@ -8,6 +8,7 @@ export type WordCard = {
   categoryName: string;
   categoryColor: string;
   learned: boolean;
+  course?: number;
 };
 
 export type Category = {

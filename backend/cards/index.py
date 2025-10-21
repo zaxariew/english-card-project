@@ -82,7 +82,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             cur.execute("""
                 SELECT c.id, c.russian, c.russian_example, c.english, c.english_example, 
                        COALESCE(up.is_learned, FALSE) as is_learned,
-                       cat.id, cat.name, cat.color
+                       cat.id, cat.name, cat.color, c.course, cg.group_id
                 FROM cards c
                 INNER JOIN card_groups cg ON c.id = cg.card_id
                 LEFT JOIN categories cat ON c.category_id = cat.id
@@ -94,7 +94,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             cur.execute("""
                 SELECT c.id, c.russian, c.russian_example, c.english, c.english_example, 
                        COALESCE(up.is_learned, FALSE) as is_learned,
-                       cat.id, cat.name, cat.color
+                       cat.id, cat.name, cat.color, c.course, 
+                       (SELECT cg.group_id FROM card_groups cg WHERE cg.card_id = c.id LIMIT 1) as group_id
                 FROM cards c
                 LEFT JOIN categories cat ON c.category_id = cat.id
                 LEFT JOIN user_progress up ON c.id = up.card_id AND up.user_id = %s
@@ -112,7 +113,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'learned': row[5],
                 'categoryId': row[6] if row[6] else None,
                 'categoryName': row[7] if row[7] else None,
-                'categoryColor': row[8] if row[8] else None
+                'categoryColor': row[8] if row[8] else None,
+                'course': row[9] if row[9] else 1,
+                'groupId': row[10] if len(row) > 10 and row[10] else None
             })
         
         cur.close()
@@ -186,11 +189,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         russian_example = body_data.get('russianExample', '')
         english_example = body_data.get('englishExample', '')
         category_id = body_data.get('categoryId')
+        course = body_data.get('course', 1)
         
         cur.execute(
-            """INSERT INTO cards (category_id, russian, english, russian_example, english_example) 
-               VALUES (%s, %s, %s, %s, %s) RETURNING id""",
-            (category_id if category_id else None, russian, english, russian_example, english_example)
+            """INSERT INTO cards (category_id, russian, english, russian_example, english_example, course) 
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
+            (category_id if category_id else None, russian, english, russian_example, english_example, course)
         )
         
         card_id = cur.fetchone()[0]
@@ -235,10 +239,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 russian_example = body_data.get('russianExample', '')
                 english_example = body_data.get('englishExample', '')
                 category_id = body_data.get('categoryId')
+                course = body_data.get('course', 1)
                 
                 cur.execute(
-                    "UPDATE cards SET russian = %s, english = %s, russian_example = %s, english_example = %s, category_id = %s WHERE id = %s",
-                    (russian, english, russian_example, english_example, category_id, card_id)
+                    "UPDATE cards SET russian = %s, english = %s, russian_example = %s, english_example = %s, category_id = %s, course = %s WHERE id = %s",
+                    (russian, english, russian_example, english_example, category_id, course, card_id)
                 )
         
         conn.commit()

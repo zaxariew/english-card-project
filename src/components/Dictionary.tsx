@@ -137,6 +137,23 @@ export default function Dictionary({
                   ))}
                 </div>
               </div>
+              {isAdmin && (
+                <div>
+                  <Label>Курс</Label>
+                  <div className="flex gap-2 mt-2">
+                    {[1, 2, 3, 4, 5].map((course) => (
+                      <Button
+                        key={course}
+                        variant={(newCard as any).course === course ? 'default' : 'outline'}
+                        onClick={() => onNewCardChange({ ...newCard, course })}
+                        className="flex-1"
+                      >
+                        {course}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <Button onClick={onAddCard} className="w-full">
                 Добавить
               </Button>
@@ -189,7 +206,14 @@ export default function Dictionary({
           >
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-3">
-                <Badge className={card.categoryColor || 'bg-gray-500'}>{card.categoryName || 'Без категории'}</Badge>
+                <div className="flex gap-2 items-center">
+                  <Badge className={card.categoryColor || 'bg-gray-500'}>{card.categoryName || 'Без категории'}</Badge>
+                  {card.course && (
+                    <Badge variant="outline" className="text-xs">
+                      {card.course} курс
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-1">
                   {isAdmin && (
                     <>
