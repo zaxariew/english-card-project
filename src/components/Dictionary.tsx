@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,12 +42,26 @@ export default function Dictionary({
   onAddCard,
   onTranslate,
 }: DictionaryProps) {
-  const filteredCards = cards.filter((card) => {
-    const matchesSearch =
-      card.russian.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      card.english.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<'course' | 'russian' | 'english'>('course');
+
+  const filteredCards = cards
+    .filter((card) => {
+      const matchesSearch =
+        card.russian.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        card.english.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCourse = selectedCourseFilter === null || (card.course || 1) === selectedCourseFilter;
+      return matchesSearch && matchesCourse;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'course') {
+        return (a.course || 1) - (b.course || 1);
+      } else if (sortBy === 'russian') {
+        return a.russian.localeCompare(b.russian);
+      } else {
+        return a.english.localeCompare(b.english);
+      }
+    });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -133,19 +148,65 @@ export default function Dictionary({
         </Dialog>
       )}
 
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Icon
-            name="Search"
-            size={18}
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          />
-          <Input
-            placeholder="Поиск по словарю..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
-          />
+      <div className="space-y-4">
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Icon
+              name="Search"
+              size={18}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            <Input
+              placeholder="Поиск по словарю..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-gray-600">Курс:</span>
+          <Button
+            variant={selectedCourseFilter === null ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedCourseFilter(null)}
+          >
+            Все
+          </Button>
+          {[1, 2, 3, 4, 5].map((course) => (
+            <Button
+              key={course}
+              variant={selectedCourseFilter === course ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCourseFilter(course)}
+            >
+              {course}
+            </Button>
+          ))}
+          <div className="border-l h-6 mx-2"></div>
+          <span className="text-sm text-gray-600">Сортировка:</span>
+          <Button
+            variant={sortBy === 'course' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSortBy('course')}
+          >
+            По курсам
+          </Button>
+          <Button
+            variant={sortBy === 'russian' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSortBy('russian')}
+          >
+            По русскому
+          </Button>
+          <Button
+            variant={sortBy === 'english' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSortBy('english')}
+          >
+            По английскому
+          </Button>
         </div>
       </div>
 
