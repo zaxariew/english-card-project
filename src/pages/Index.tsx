@@ -38,6 +38,10 @@ export default function Index() {
   const [editingCard, setEditingCard] = useState<WordCard | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [exerciseType, setExerciseType] = useState<'cards' | 'listening' | 'fillgaps' | 'test'>('cards');
+  const [selectedCourse, setSelectedCourse] = useState<number>(() => {
+    const saved = localStorage.getItem('selectedCourse');
+    return saved ? parseInt(saved) : 1;
+  });
 
   const [newCategory, setNewCategory] = useState({
     name: '',
@@ -790,7 +794,29 @@ export default function Index() {
                   <Icon name="Settings" size={24} />
                   Настройки
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-3">
+                      Выберите курс
+                    </label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((course) => (
+                        <Button
+                          key={course}
+                          variant={selectedCourse === course ? 'default' : 'outline'}
+                          onClick={() => {
+                            setSelectedCourse(course);
+                            localStorage.setItem('selectedCourse', course.toString());
+                            toast.success(`Выбран ${course} курс`);
+                          }}
+                          className="flex-1"
+                        >
+                          {course}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
                   <Button
                     variant="destructive"
                     onClick={() => {
