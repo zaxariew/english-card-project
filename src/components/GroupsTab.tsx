@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ type GroupsTabProps = {
   selectedCardsForGroup: number[];
   addCardsDialogOpen: boolean;
   dialogSearchQuery: string;
-  cardsSortBy: 'russian' | 'english' | 'category';
+  cardsSortBy: 'russian' | 'english' | 'category' | 'course';
   onNewGroupChange: (group: { name: string; description: string; color: string }) => void;
   onAddGroup: () => void;
   onDeleteGroup: (groupId: number) => void;
@@ -27,7 +28,7 @@ type GroupsTabProps = {
   onSelectedGroupIdChange: (groupId: number | null) => void;
   onSelectedCardsChange: (cardIds: number[]) => void;
   onDialogSearchChange: (query: string) => void;
-  onCardsSortByChange: (sortBy: 'russian' | 'english' | 'category') => void;
+  onCardsSortByChange: (sortBy: 'russian' | 'english' | 'category' | 'course') => void;
   onAddCardsToGroup: (groupId: number) => void;
 };
 
@@ -50,22 +51,27 @@ export default function GroupsTab({
   onCardsSortByChange,
   onAddCardsToGroup,
 }: GroupsTabProps) {
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<number | null>(null);
+
   const sortedAllCards = [...allCards]
     .filter((card) => {
       const query = dialogSearchQuery.toLowerCase();
-      return (
+      const matchesSearch = (
         card.russian.toLowerCase().includes(query) ||
-        card.english.toLowerCase().includes(query) ||
-        (card.categoryName || '').toLowerCase().includes(query)
+        card.english.toLowerCase().includes(query)
       );
+      const matchesCourse = selectedCourseFilter === null || (card.course || 1) === selectedCourseFilter;
+      return matchesSearch && matchesCourse;
     })
     .sort((a, b) => {
-      if (cardsSortBy === 'russian') {
+      if (cardsSortBy === 'course') {
+        return (a.course || 1) - (b.course || 1);
+      } else if (cardsSortBy === 'russian') {
         return a.russian.localeCompare(b.russian);
       } else if (cardsSortBy === 'english') {
         return a.english.localeCompare(b.english);
       } else {
-        return (a.categoryName || '').localeCompare(b.categoryName || '');
+        return 0;
       }
     });
 
@@ -187,28 +193,51 @@ export default function GroupsTab({
                           className="pl-10"
                         />
                       </div>
-                      <div className="flex gap-2 pb-2">
-                        <Button
-                          variant={cardsSortBy === 'russian' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => onCardsSortByChange('russian')}
-                        >
-                          По русскому
-                        </Button>
-                        <Button
-                          variant={cardsSortBy === 'english' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => onCardsSortByChange('english')}
-                        >
-                          По английскому
-                        </Button>
-                        <Button
-                          variant={cardsSortBy === 'category' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => onCardsSortByChange('category')}
-                        >
-                          По категории
-                        </Button>
+                      <div className="space-y-2 pb-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm text-gray-600">Курс:</span>
+                          <Button
+                            variant={selectedCourseFilter === null ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSelectedCourseFilter(null)}
+                          >
+                            Все
+                          </Button>
+                          {[1, 2, 3, 4, 5].map((course) => (
+                            <Button
+                              key={course}
+                              variant={selectedCourseFilter === course ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setSelectedCourseFilter(course)}
+                            >
+                              {course}
+                            </Button>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="text-sm text-gray-600">Сортировка:</span>
+                          <Button
+                            variant={cardsSortBy === 'course' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => onCardsSortByChange('course')}
+                          >
+                            По курсам
+                          </Button>
+                          <Button
+                            variant={cardsSortBy === 'russian' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => onCardsSortByChange('russian')}
+                          >
+                            По русскому
+                          </Button>
+                          <Button
+                            variant={cardsSortBy === 'english' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => onCardsSortByChange('english')}
+                          >
+                            По английскому
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex gap-2 items-center">
                         <Button

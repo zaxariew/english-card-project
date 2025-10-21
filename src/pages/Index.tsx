@@ -54,7 +54,7 @@ export default function Index() {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedCardsForGroup, setSelectedCardsForGroup] = useState<number[]>([]);
   const [allCards, setAllCards] = useState<WordCard[]>([]);
-  const [cardsSortBy, setCardsSortBy] = useState<'russian' | 'english' | 'category'>('russian');
+  const [cardsSortBy, setCardsSortBy] = useState<'russian' | 'english' | 'category' | 'course'>('course');
   const [addCardsDialogOpen, setAddCardsDialogOpen] = useState(false);
   const [dialogSearchQuery, setDialogSearchQuery] = useState('');
 
