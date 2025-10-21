@@ -107,6 +107,21 @@ export default function GroupsTab({
                 onChange={(e) => onNewGroupChange({ ...newGroup, color: e.target.value })}
               />
             </div>
+            <div>
+              <Label>Курс</Label>
+              <div className="flex gap-2 mt-2">
+                {[1, 2, 3, 4, 5].map((course) => (
+                  <Button
+                    key={course}
+                    variant={(newGroup as any).course === course ? 'default' : 'outline'}
+                    onClick={() => onNewGroupChange({ ...newGroup, course } as any)}
+                    className="flex-1"
+                  >
+                    {course}
+                  </Button>
+                ))}
+              </div>
+            </div>
             <Button onClick={onAddGroup} className="w-full">
               Создать
             </Button>
@@ -123,6 +138,11 @@ export default function GroupsTab({
                   <h3 className="text-2xl font-bold mb-1" style={{ color: group.color }}>{group.name}</h3>
                   {group.description && (
                     <p className="text-sm text-gray-600">{group.description}</p>
+                  )}
+                  {group.course && (
+                    <Badge variant="outline" className="mt-2">
+                      {group.course} курс
+                    </Badge>
                   )}
                 </div>
                 <Badge variant="secondary" className="text-lg px-3 py-1">

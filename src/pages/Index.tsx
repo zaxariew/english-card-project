@@ -56,6 +56,7 @@ export default function Index() {
     name: '',
     description: '',
     color: '#3b82f6',
+    course: 1,
   });
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedCardsForGroup, setSelectedCardsForGroup] = useState<number[]>([]);
@@ -65,6 +66,7 @@ export default function Index() {
   const [dialogSearchQuery, setDialogSearchQuery] = useState('');
 
   const filteredCards = user?.isAdmin ? cards : cards.filter(card => (card.course || 1) === selectedCourse);
+  const filteredGroups = user?.isAdmin ? groups : groups.filter(group => (group.course || 1) === selectedCourse);
   const currentCard = filteredCards[currentCardIndex];
 
   useEffect(() => {
@@ -464,7 +466,7 @@ export default function Index() {
       });
       if (response.ok) {
         toast.success('Группа создана!');
-        setNewGroup({ name: '', description: '', color: '#3b82f6' });
+        setNewGroup({ name: '', description: '', color: '#3b82f6', course: 1 });
         loadGroups();
       }
     } catch (error) {
@@ -648,7 +650,7 @@ export default function Index() {
                   totalCards={filteredCards.length}
                   isFlipped={isFlipped}
                   isAdmin={user?.isAdmin || false}
-                  groups={groups}
+                  groups={filteredGroups}
                   selectedGroupId={selectedGroupId}
                   categories={categories}
                   newCard={newCard}
@@ -763,11 +765,11 @@ export default function Index() {
                   <Icon name="UsersRound" size={24} />
                   Изученные группы
                 </h3>
-                {groups.length === 0 ? (
+                {filteredGroups.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">Нет доступных групп</p>
                 ) : (
                   <div className="space-y-4">
-                    {groups.map((group) => {
+                    {filteredGroups.map((group) => {
                       const groupCards = cards.filter(c => c.groupId === group.id);
                       const learnedCards = groupCards.filter(c => c.learned);
                       const progress = groupCards.length > 0 ? Math.round((learnedCards.length / groupCards.length) * 100) : 0;

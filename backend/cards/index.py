@@ -50,10 +50,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if resource == 'groups':
             cur.execute("""
                 SELECT g.id, g.name, g.description, g.color, g.created_at,
-                       COUNT(cg.card_id) as card_count
+                       COUNT(cg.card_id) as card_count, g.course
                 FROM groups g
                 LEFT JOIN card_groups cg ON g.id = cg.group_id
-                GROUP BY g.id, g.name, g.description, g.color, g.created_at
+                GROUP BY g.id, g.name, g.description, g.color, g.created_at, g.course
                 ORDER BY g.created_at DESC
             """)
             
@@ -65,7 +65,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'description': row[2] or '',
                     'color': row[3],
                     'createdAt': row[4].isoformat() if row[4] else None,
-                    'cardCount': row[5]
+                    'cardCount': row[5],
+                    'course': row[6] if row[6] else 1
                 })
             
             cur.close()
@@ -145,10 +146,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             name = body_data.get('name', '')
             description = body_data.get('description', '')
             color = body_data.get('color', '#3b82f6')
+            course = body_data.get('course', 1)
             
             cur.execute(
-                "INSERT INTO groups (name, description, color) VALUES (%s, %s, %s) RETURNING id",
-                (name, description, color)
+                "INSERT INTO groups (name, description, color, course) VALUES (%s, %s, %s, %s) RETURNING id",
+                (name, description, color, course)
             )
             
             group_id = cur.fetchone()[0]
@@ -217,10 +219,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             name = body_data.get('name', '')
             description = body_data.get('description', '')
             color = body_data.get('color', '#3b82f6')
+            course = body_data.get('course', 1)
             
             cur.execute(
-                "UPDATE groups SET name = %s, description = %s, color = %s WHERE id = %s",
-                (name, description, color, group_id)
+                "UPDATE groups SET name = %s, description = %s, color = %s, course = %s WHERE id = %s",
+                (name, description, color, course, group_id)
             )
         else:
             card_id = body_data.get('id') or body_data.get('cardId')

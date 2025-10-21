@@ -24,6 +24,7 @@ export type Group = {
   color: string;
   createdAt: string;
   cardCount: number;
+  course?: number;
 };
 
 export type UserAccount = {
