@@ -142,7 +142,6 @@ export default function Index() {
         if (userData.isAdmin) {
           loadAccounts();
         }
-        loadCategories(data.userId, userData.isAdmin);
         loadCards(data.userId, null, userData.isAdmin);
       } else {
         toast.error(data.error || 'Ошибка авторизации');
@@ -156,7 +155,6 @@ export default function Index() {
     setUser(null);
     localStorage.removeItem('user');
     setCards([]);
-    setCategories([]);
     setShowAuth(true);
     toast.success('Выход выполнен');
   };
