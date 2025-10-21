@@ -309,7 +309,7 @@ export default function Index() {
         toast.success('Карточка обновлена!');
         setEditDialogOpen(false);
         setEditingCard(null);
-        loadCards(user.id);
+        loadCards(user.id, selectedGroupId);
       } else {
         toast.error('Ошибка при обновлении');
       }
