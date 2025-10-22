@@ -22,6 +22,7 @@ type CardViewerProps = {
     englishExample: string;
   };
   isTranslating: boolean;
+  isShuffled: boolean;
   onFlip: () => void;
   onNext: () => void;
   onPrevious: () => void;
@@ -31,6 +32,7 @@ type CardViewerProps = {
   onNewCardChange: (card: any) => void;
   onAddCard: () => void;
   onTranslate: () => void;
+  onShuffle: () => void;
 };
 
 export default function CardViewer({
@@ -43,6 +45,7 @@ export default function CardViewer({
   selectedGroupId,
   newCard,
   isTranslating,
+  isShuffled,
   onFlip,
   onNext,
   onPrevious,
@@ -52,6 +55,7 @@ export default function CardViewer({
   onNewCardChange,
   onAddCard,
   onTranslate,
+  onShuffle,
 }: CardViewerProps) {
   return (
     <div className="space-y-6 animate-scale-in">
@@ -73,8 +77,19 @@ export default function CardViewer({
         </div>
       )}
       <div className="flex justify-between items-center">
-        <div className="text-sm text-gray-500">
-          Карточка {currentCardIndex + 1} из {totalCards}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500">
+            Карточка {currentCardIndex + 1} из {totalCards}
+          </div>
+          <Button
+            variant={isShuffled ? 'default' : 'outline'}
+            size="sm"
+            onClick={onShuffle}
+            className="gap-2"
+          >
+            <Icon name="Shuffle" size={16} />
+            {isShuffled ? 'Перемешано' : 'Перемешать'}
+          </Button>
         </div>
         {isAdmin && (
           <Dialog>

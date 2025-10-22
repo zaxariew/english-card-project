@@ -57,10 +57,12 @@ export default function Index() {
   const [cardsSortBy, setCardsSortBy] = useState<'russian' | 'english' | 'category' | 'course'>('course');
   const [addCardsDialogOpen, setAddCardsDialogOpen] = useState(false);
   const [dialogSearchQuery, setDialogSearchQuery] = useState('');
+  const [isShuffled, setIsShuffled] = useState(false);
 
   const filteredCards = user?.isAdmin ? cards : cards.filter(card => (card.course || 1) === selectedCourse);
   const filteredGroups = user?.isAdmin ? groups : groups.filter(group => (group.course || 1) === selectedCourse);
-  const currentCard = filteredCards[currentCardIndex];
+  const displayCards = isShuffled ? [...filteredCards] : filteredCards;
+  const currentCard = displayCards[currentCardIndex];
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -284,6 +286,23 @@ export default function Index() {
   const handlePrevious = () => {
     setIsFlipped(false);
     setCurrentCardIndex((prev) => (prev - 1 + cards.length) % cards.length);
+  };
+
+  const handleShuffle = () => {
+    if (displayCards.length <= 1) {
+      toast.info('Недостаточно карточек для перемешивания');
+      return;
+    }
+    
+    const shuffled = [...filteredCards].sort(() => Math.random() - 0.5);
+    setCards(prevCards => {
+      const otherCards = prevCards.filter(c => !filteredCards.some(fc => fc.id === c.id));
+      return [...otherCards, ...shuffled];
+    });
+    setIsShuffled(true);
+    setCurrentCardIndex(0);
+    setIsFlipped(false);
+    toast.success('Карточки перемешаны!');
   };
 
   const handleEditCard = async () => {
@@ -587,13 +606,14 @@ export default function Index() {
                 <CardViewer
                   currentCard={currentCard}
                   currentCardIndex={currentCardIndex}
-                  totalCards={filteredCards.length}
+                  totalCards={displayCards.length}
                   isFlipped={isFlipped}
                   isAdmin={user?.isAdmin || false}
                   groups={filteredGroups}
                   selectedGroupId={selectedGroupId}
                   newCard={newCard}
                   isTranslating={isTranslating}
+                  isShuffled={isShuffled}
                   onFlip={handleFlip}
                   onNext={handleNext}
                   onPrevious={handlePrevious}
@@ -603,6 +623,7 @@ export default function Index() {
                   onNewCardChange={setNewCard}
                   onAddCard={handleAddCard}
                   onTranslate={handleTranslate}
+                  onShuffle={handleShuffle}
                 />
               )}
 
